@@ -9,6 +9,15 @@ if ($nativeHarnessSource -match 'for \(\$attempt = 1; \$attempt -le 3; \$attempt
     throw 'Native headless playback failures must not be hidden by an unreported whole-case retry loop.'
 }
 
+foreach ($requiredLockToken in @(
+    'NoiraPlayer.NativeHeadlessHarnessSmoke',
+    'WaitOne(0)',
+    'another native-headless smoke run is active')) {
+    if ($nativeHarnessSource -notmatch [regex]::Escape($requiredLockToken)) {
+        throw ('Native headless smoke must reject concurrent runs before sharing artifacts: ' + $requiredLockToken)
+    }
+}
+
 if (-not $plan.commands -or $plan.commands.Count -lt 2) {
     throw 'Expected at least two playback-core validation commands.'
 }

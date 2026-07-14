@@ -153,6 +153,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t VideoDecodeQueueCapacity{0};
         uint64_t VideoDecodeQueueMaxDepth{0};
         uint64_t VideoDecodeQueueProducerWaitCount{0};
+        uint64_t VideoDecoderSendPacketEagainCount{0};
+        uint64_t VideoDecoderDoubleEagainRetryCount{0};
+        uint64_t VideoDecoderDoubleEagainRecoveryCount{0};
+        uint64_t VideoDecoderDoubleEagainExhaustedCount{0};
         double VideoDecodePacketReadDurationMsP50{0.0};
         double VideoDecodePacketReadDurationMsP95{0.0};
         double VideoDecodeSendPacketDurationMsP50{0.0};

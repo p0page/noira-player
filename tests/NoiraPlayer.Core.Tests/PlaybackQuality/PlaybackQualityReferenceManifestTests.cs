@@ -2510,6 +2510,10 @@ public sealed class PlaybackQualityReferenceManifestTests
         entry.PresentSignals.Add("runtimeMetrics.providerStatus");
         entry.PresentSignals.Add("runtimeMetrics.hasSnapshot");
         entry.PresentSignals.Add("runtimeMetrics.hasPlaybackSample");
+        entry.PresentSignals.Add("timing.videoDecoderSendPacketEagainCount");
+        entry.PresentSignals.Add("timing.videoDecoderDoubleEagainRetryCount");
+        entry.PresentSignals.Add("timing.videoDecoderDoubleEagainRecoveryCount");
+        entry.PresentSignals.Add("timing.videoDecoderDoubleEagainExhaustedCount");
         entry.PresentSignals.Add("colorPipeline.conversionStatus");
         entry.PresentSignals.Add("buffers.videoStarvedPasses");
         entry.PresentSignals.Add("buffers.audioStarvedPasses");
@@ -2578,6 +2582,11 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains(validation.Errors, error =>
             error.Code == "report.requiredSignal.missing" &&
             error.Signal == "buffers.audioStarvedPasses");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "timing.videoDecoderDoubleEagainExhaustedCount" &&
+            error.FailureArea == "decoder-recovery" &&
+            error.CodeTargets.Contains("src/NoiraPlayer.Native/Media/VideoDecoder.cpp"));
     }
 
     [Fact]

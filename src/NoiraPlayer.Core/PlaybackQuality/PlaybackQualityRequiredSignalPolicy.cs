@@ -65,6 +65,10 @@ namespace NoiraPlayer.Core.PlaybackQuality
             AddUnique(requiredSignals, "runtimeMetrics.hasSnapshot");
             AddUnique(requiredSignals, "runtimeMetrics.hasPlaybackSample");
             AddVideoRenderPhaseSignals(requiredSignals);
+            AddUnique(requiredSignals, "timing.videoDecoderSendPacketEagainCount");
+            AddUnique(requiredSignals, "timing.videoDecoderDoubleEagainRetryCount");
+            AddUnique(requiredSignals, "timing.videoDecoderDoubleEagainRecoveryCount");
+            AddUnique(requiredSignals, "timing.videoDecoderDoubleEagainExhaustedCount");
 
             foreach (var componentName in PlaybackQualityStartupTransportCallEvidence.ComponentNames)
             {
@@ -702,6 +706,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     return report.Timing.RenderIntervalMsP95 > 0;
                 case "timing.renderIntervalMsP99":
                     return report.Timing.RenderIntervalMsP99 > 0;
+                case "timing.videoDecoderSendPacketEagainCount":
+                case "timing.videoDecoderDoubleEagainRetryCount":
+                case "timing.videoDecoderDoubleEagainRecoveryCount":
+                case "timing.videoDecoderDoubleEagainExhaustedCount":
+                    return true;
                 case "timing.videoRenderDirectCopyFrameCount":
                 case "timing.videoRenderVideoProcessorFrameCount":
                 case "timing.videoRenderBgraFrameCount":

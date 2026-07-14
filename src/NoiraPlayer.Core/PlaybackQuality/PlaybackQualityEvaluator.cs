@@ -17,6 +17,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             report.Analysis = new PlaybackQualityAnalysis();
             CheckFailedLifecycleOperations(report);
             CheckObservedSourceMetadata(report);
+            CheckDecoderRecovery(report);
 
             if (report.Expected == null)
             {
@@ -403,6 +404,79 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "source.videoMetadataStatus",
                 report.Source.VideoMetadataStatus,
                 "observed");
+        }
+
+        private static void CheckDecoderRecovery(PlaybackQualityReport report)
+        {
+            var timing = report.Timing ?? new PlaybackQualityTiming();
+            var hasObservedDecoderRecoveryActivity =
+                timing.VideoDecoderSendPacketEagainCount > 0 ||
+                timing.VideoDecoderDoubleEagainRetryCount > 0 ||
+                timing.VideoDecoderDoubleEagainRecoveryCount > 0 ||
+                timing.VideoDecoderDoubleEagainExhaustedCount > 0;
+            var hasNativeDecoderEvidence =
+                report.Execution != null &&
+                PlaybackQualityEvidenceLevel.MeetsMinimum(
+                    report.Execution.EvidenceLevel,
+                    PlaybackQualityEvidenceLevel.NativePlayback) &&
+                report.Execution.DecoderOpened;
+            if (!hasObservedDecoderRecoveryActivity && !hasNativeDecoderEvidence)
+            {
+                return;
+            }
+
+            var inconsistent =
+                timing.VideoDecoderDoubleEagainRetryCount > timing.VideoDecoderSendPacketEagainCount ||
+                timing.VideoDecoderDoubleEagainRecoveryCount > timing.VideoDecoderDoubleEagainRetryCount ||
+                timing.VideoDecoderDoubleEagainExhaustedCount > timing.VideoDecoderSendPacketEagainCount;
+            if (inconsistent)
+            {
+                const string message =
+                    "Video decoder EAGAIN counters are internally inconsistent.";
+                report.FailureReasons.Add(message);
+                report.Checks.Add(new PlaybackQualityCheck
+                {
+                    Name = "VideoDecoderEagainEvidenceConsistency",
+                    Signal = "timing.videoDecoderDoubleEagainRetryCount",
+                    Status = "fail",
+                    FailureArea = "evidence-collection",
+                    FailureClass = PlaybackQualityFailureClassification.EvaluationHarnessBug,
+                    Expected = "retry <= send; recovery <= retry; exhausted <= send",
+                    Actual =
+                        "send=" + timing.VideoDecoderSendPacketEagainCount +
+                        ", retry=" + timing.VideoDecoderDoubleEagainRetryCount +
+                        ", recovery=" + timing.VideoDecoderDoubleEagainRecoveryCount +
+                        ", exhausted=" + timing.VideoDecoderDoubleEagainExhaustedCount,
+                    Message = message
+                });
+                AddRelevantSignal(report, "timing.videoDecoderSendPacketEagainCount");
+                AddRelevantSignal(report, "timing.videoDecoderDoubleEagainRetryCount");
+                AddRelevantSignal(report, "timing.videoDecoderDoubleEagainRecoveryCount");
+                AddRelevantSignal(report, "timing.videoDecoderDoubleEagainExhaustedCount");
+            }
+
+            var exhausted = timing.VideoDecoderDoubleEagainExhaustedCount;
+            var exhaustedMessage = exhausted == 0
+                ? "Video decoder bounded double-EAGAIN recovery was not exhausted."
+                : "Video decoder bounded double-EAGAIN recovery exhausted " + exhausted + " time(s).";
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = "VideoDecoderDoubleEagainExhaustedCount",
+                Signal = "timing.videoDecoderDoubleEagainExhaustedCount",
+                Status = exhausted == 0 ? "pass" : "fail",
+                FailureArea = "decoder-recovery",
+                FailureClass = exhausted == 0
+                    ? ""
+                    : PlaybackQualityFailureClassification.PlayerCoreBug,
+                Expected = "0",
+                Actual = exhausted.ToString(CultureInfo.InvariantCulture),
+                Message = exhaustedMessage
+            });
+            if (exhausted > 0)
+            {
+                report.FailureReasons.Add(exhaustedMessage);
+                AddRelevantSignal(report, "timing.videoDecoderDoubleEagainExhaustedCount");
+            }
         }
 
         private static void CheckObservedSourceMetadataValue(

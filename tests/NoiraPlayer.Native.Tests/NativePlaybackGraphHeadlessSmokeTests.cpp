@@ -961,6 +961,10 @@ int wmain(int argc, wchar_t** argv)
             << " videoDecodeQueueCapacity=" << playbackSnapshot.VideoDecodeQueueCapacity
             << " videoDecodeQueueMaxDepth=" << playbackSnapshot.VideoDecodeQueueMaxDepth
             << " videoDecodeQueueProducerWaitCount=" << playbackSnapshot.VideoDecodeQueueProducerWaitCount
+            << " videoDecoderSendPacketEagainCount=" << playbackSnapshot.VideoDecoderSendPacketEagainCount
+            << " videoDecoderDoubleEagainRetryCount=" << playbackSnapshot.VideoDecoderDoubleEagainRetryCount
+            << " videoDecoderDoubleEagainRecoveryCount=" << playbackSnapshot.VideoDecoderDoubleEagainRecoveryCount
+            << " videoDecoderDoubleEagainExhaustedCount=" << playbackSnapshot.VideoDecoderDoubleEagainExhaustedCount
             << " videoDecodePacketReadDurationMsP50=" << playbackSnapshot.VideoDecodePacketReadDurationMsP50
             << " videoDecodePacketReadDurationMsP95=" << playbackSnapshot.VideoDecodePacketReadDurationMsP95
             << " videoDecodeSendPacketDurationMsP50=" << playbackSnapshot.VideoDecodeSendPacketDurationMsP50

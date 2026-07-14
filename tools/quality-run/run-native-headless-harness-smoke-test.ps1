@@ -11,6 +11,30 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+$repoIdentityBytes = [System.Text.Encoding]::UTF8.GetBytes($repoRoot.ToLowerInvariant())
+$repoIdentityHasher = [System.Security.Cryptography.SHA256]::Create()
+$repoIdentityHash = $repoIdentityHasher.ComputeHash($repoIdentityBytes)
+$repoIdentityHasher.Dispose()
+$repoIdentity = ([System.BitConverter]::ToString($repoIdentityHash) -replace '-', '').Substring(0, 16)
+$runMutexName = 'Local\NoiraPlayer.NativeHeadlessHarnessSmoke.' + $repoIdentity
+$runMutex = [System.Threading.Mutex]::new($false, $runMutexName)
+try {
+    $runMutexAcquired = $runMutex.WaitOne(0)
+}
+catch [System.Threading.AbandonedMutexException] {
+    $runMutexAcquired = $true
+}
+if (-not $runMutexAcquired) {
+    throw 'another native-headless smoke run is active for this worktree'
+}
+$null = Register-EngineEvent -SourceIdentifier PowerShell.Exiting -MessageData $runMutex -Action {
+    try {
+        $event.MessageData.ReleaseMutex()
+        $event.MessageData.Dispose()
+    }
+    catch {
+    }
+}
 $smokeRoot = Join-Path $repoRoot 'artifacts\quality-run\native-headless-smoke'
 $capturedDir = Join-Path $smokeRoot 'captured'
 $materializedDir = Join-Path $smokeRoot 'materialized'
@@ -960,6 +984,10 @@ function New-NativeHeadlessParserFixtureOutput {
         videoDecodeQueueCapacity = '3'
         videoDecodeQueueMaxDepth = '3'
         videoDecodeQueueProducerWaitCount = '10'
+        videoDecoderSendPacketEagainCount = '0'
+        videoDecoderDoubleEagainRetryCount = '0'
+        videoDecoderDoubleEagainRecoveryCount = '0'
+        videoDecoderDoubleEagainExhaustedCount = '0'
         videoDecodePacketReadDurationMsP50 = '0.1'
         videoDecodePacketReadDurationMsP95 = '0.2'
         videoDecodeSendPacketDurationMsP50 = '0.1'
@@ -2064,6 +2092,10 @@ function Assert-NativeHeadlessParserContracts {
         'videoDecodeQueueCapacity',
         'videoDecodeQueueMaxDepth',
         'videoDecodeQueueProducerWaitCount',
+        'videoDecoderSendPacketEagainCount',
+        'videoDecoderDoubleEagainRetryCount',
+        'videoDecoderDoubleEagainRecoveryCount',
+        'videoDecoderDoubleEagainExhaustedCount',
         'playbackDemuxReadDurationMs',
         'playbackDemuxPacketCount',
         'playbackDemuxBytes',

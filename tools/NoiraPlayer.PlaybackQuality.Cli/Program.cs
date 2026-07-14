@@ -1338,10 +1338,66 @@ internal static class Program
         var envelopes = new List<PlaybackQualityReportEnvelope>();
         foreach (var item in EnumerateJsonFilesByRelativePath(directory))
         {
+            if (!IsPlaybackQualityReportDocument(item.Value))
+            {
+                continue;
+            }
+
             envelopes.Add(ReadPlaybackQualityReportEnvelope(item.Value, item.Key));
         }
 
         return envelopes;
+    }
+
+    private static bool IsPlaybackQualityReportDocument(string path)
+    {
+        using (var document = JsonDocument.Parse(File.ReadAllText(path)))
+        {
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            if (TryGetPropertyIgnoreCase(root, "report", out var reportElement) &&
+                reportElement.ValueKind == JsonValueKind.Object)
+            {
+                return true;
+            }
+
+            var isRawReport = TryGetPropertyIgnoreCase(root, "runId", out _) ||
+                TryGetPropertyIgnoreCase(root, "metricVersion", out _) ||
+                TryGetPropertyIgnoreCase(root, "execution", out _) ||
+                TryGetPropertyIgnoreCase(root, "timing", out _) ||
+                TryGetPropertyIgnoreCase(root, "checks", out _);
+            return isRawReport || IsKnownPlaybackQualityAuxiliaryDocument(root, path);
+        }
+    }
+
+    private static bool IsKnownPlaybackQualityAuxiliaryDocument(
+        JsonElement root,
+        string path)
+    {
+        var isRunnerSummary =
+            TryGetPropertyIgnoreCase(root, "runnerVersion", out _) &&
+            TryGetPropertyIgnoreCase(root, "attempts", out _);
+        var isValidation =
+            TryGetPropertyIgnoreCase(root, "isValid", out _) &&
+            TryGetPropertyIgnoreCase(root, "errors", out _);
+        var isMaterializationSummary =
+            TryGetPropertyIgnoreCase(root, "reportsDirectory", out _) &&
+            TryGetPropertyIgnoreCase(root, "manifestValidation", out _);
+        var isAnalysisSummary =
+            TryGetPropertyIgnoreCase(root, "totalReportCount", out _) &&
+            TryGetPropertyIgnoreCase(root, "analyzedReportCount", out _) &&
+            TryGetPropertyIgnoreCase(root, "cases", out _);
+        if (isRunnerSummary || isValidation || isMaterializationSummary || isAnalysisSummary)
+        {
+            return false;
+        }
+
+        throw new InvalidOperationException(
+            "Unrecognized JSON document in playback report directory: " + path);
     }
 
     private static string ReadValue(string[] args, ref int index, string optionName)

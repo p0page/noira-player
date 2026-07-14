@@ -81,6 +81,10 @@ namespace NoiraPlayer.Core.PlaybackQuality
             report.Timing.VideoDecodeQueueCapacity = metrics.VideoDecodeQueueCapacity;
             report.Timing.VideoDecodeQueueMaxDepth = metrics.VideoDecodeQueueMaxDepth;
             report.Timing.VideoDecodeQueueProducerWaitCount = metrics.VideoDecodeQueueProducerWaitCount;
+            report.Timing.VideoDecoderSendPacketEagainCount = metrics.VideoDecoderSendPacketEagainCount;
+            report.Timing.VideoDecoderDoubleEagainRetryCount = metrics.VideoDecoderDoubleEagainRetryCount;
+            report.Timing.VideoDecoderDoubleEagainRecoveryCount = metrics.VideoDecoderDoubleEagainRecoveryCount;
+            report.Timing.VideoDecoderDoubleEagainExhaustedCount = metrics.VideoDecoderDoubleEagainExhaustedCount;
             report.Timing.VideoDecodePacketReadDurationMsP50 = metrics.VideoDecodePacketReadDurationMsP50;
             report.Timing.VideoDecodePacketReadDurationMsP95 = metrics.VideoDecodePacketReadDurationMsP95;
             report.Timing.VideoDecodeSendPacketDurationMsP50 = metrics.VideoDecodeSendPacketDurationMsP50;

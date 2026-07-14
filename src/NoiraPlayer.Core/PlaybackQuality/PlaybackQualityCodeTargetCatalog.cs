@@ -65,6 +65,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
             "src/NoiraPlayer.Core/PlaybackQuality/PlaybackRefreshRatePolicy.cs"
         };
 
+        private static readonly string[] DecoderRecoveryTargets =
+        {
+            "src/NoiraPlayer.Native/Media/DecoderEagainRecovery.h",
+            "src/NoiraPlayer.Native/Media/VideoDecoder.cpp",
+            "src/NoiraPlayer.Native/Media/PlaybackGraph.cpp",
+            "src/NoiraPlayer.Core/PlaybackQuality/PlaybackQualityEvaluator.cs"
+        };
+
         private static readonly string[] TrackTargets =
         {
             "src/NoiraPlayer.Native/Media/AudioDecoder.cpp",
@@ -111,6 +119,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             "timeline",
             "av-sync",
             "frame-pacing",
+            "decoder-recovery",
             "evidence-collection",
             "metadata",
             "tracks",
@@ -161,6 +170,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     return AvSyncTargets;
                 case "frame-pacing":
                     return FramePacingTargets;
+                case "decoder-recovery":
+                    return DecoderRecoveryTargets;
                 case "tracks":
                     return TrackTargets;
                 case "subtitles":
@@ -214,6 +225,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     System.StringComparison.Ordinal))
             {
                 return "subtitles";
+            }
+
+            if (StartsWithSignal(signal, "timing.videoDecoder"))
+            {
+                return "decoder-recovery";
             }
 
             if (StartsWithSignal(signal, "timing.") ||

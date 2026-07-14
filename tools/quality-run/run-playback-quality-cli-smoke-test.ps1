@@ -67,6 +67,18 @@ function Set-SmokeNativeExecutionEvidence {
         $payload.timing | Add-Member -NotePropertyName decodedVideoFrames -NotePropertyValue $decodedFrames
     }
 
+    if ($PlaybackSampleObserved -and $null -ne $payload.timing) {
+        foreach ($name in @(
+            'videoDecoderSendPacketEagainCount',
+            'videoDecoderDoubleEagainRetryCount',
+            'videoDecoderDoubleEagainRecoveryCount',
+            'videoDecoderDoubleEagainExhaustedCount')) {
+            if ($null -eq $payload.timing.PSObject.Properties[$name]) {
+                $payload.timing | Add-Member -NotePropertyName $name -NotePropertyValue ([uint64]0)
+            }
+        }
+    }
+
     if ($PlaybackSampleObserved -and $null -ne $payload.timing -and
         $null -eq $payload.timing.PSObject.Properties['videoRenderVideoProcessorFrameCount']) {
         $renderedFrames = [Math]::Max(1, [int64]$payload.timing.renderedVideoFrames)
@@ -710,8 +722,8 @@ try {
         throw 'Expected analyze-report-set output schemaVersion 1.'
     }
 
-    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.16') {
-        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.16.'
+    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.17') {
+        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.17.'
     }
 
     if ($analysisSet.action -ne 'fix-report-analysis') {
@@ -1025,8 +1037,8 @@ try {
         throw 'Expected playback quality CLI plan-runs output schemaVersion 1.'
     }
 
-    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.16') {
-        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.16.'
+    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.17') {
+        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.17.'
     }
 
     if ($runPlan.caseCount -ne 3) {
@@ -1076,7 +1088,7 @@ try {
 
     $materializedBaselineSummary = Get-Content -Raw -LiteralPath $materializedBaselineSummaryPath | ConvertFrom-Json
     if ($materializedBaselineSummary.schemaVersion -ne 1 -or
-        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.16' -or
+        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.17' -or
         $materializedBaselineSummary.caseCount -ne 3 -or
         $materializedBaselineSummary.reportsDirectory -ne $materializedBaselineDir) {
         throw 'Expected materialize-baseline-report-set summary to describe generated reports.'
@@ -2464,6 +2476,15 @@ try {
         -SourceOpened $true `
         -PlaybackSampleObserved $false
 
+    @'
+{
+  "schemaVersion": 1,
+  "runnerVersion": "native-manifest-runner-v0.1",
+  "selectedCaseCount": 3,
+  "attempts": []
+}
+'@ | Set-Content -LiteralPath (Join-Path $reportSetDir 'manifest-run-summary.json') -Encoding UTF8
+
     Push-Location $repoRoot
     try {
         dotnet $cliDll `
@@ -2472,7 +2493,13 @@ try {
             --reports-dir $reportSetDir `
             --output $reportSetValidationPath
         if ($LASTEXITCODE -ne 0) {
-            throw 'playback quality CLI validate-report-set returned a non-zero exit code.'
+            $validationDetail = if (Test-Path -LiteralPath $reportSetValidationPath) {
+                Get-Content -Raw -LiteralPath $reportSetValidationPath
+            } else {
+                'validation output missing'
+            }
+            throw ('playback quality CLI validate-report-set returned a non-zero exit code: ' +
+                $validationDetail)
         }
     }
     finally {
@@ -2490,6 +2517,25 @@ try {
 
     if ($reportSetValidation.matchedCaseCount -ne 3) {
         throw 'Expected playback quality CLI validate-report-set output to include three matched cases.'
+    }
+
+    $unknownJsonPath = Join-Path $reportSetDir 'unknown-document.json'
+    '{ "schemaVersion": 1 }' |
+        Set-Content -LiteralPath $unknownJsonPath -Encoding UTF8
+    Push-Location $repoRoot
+    try {
+        dotnet $cliDll `
+            validate-report-set `
+            --manifest $manifestPath `
+            --reports-dir $reportSetDir `
+            --output (Join-Path $tempRoot 'unknown-document-validation.json')
+        if ($LASTEXITCODE -eq 0) {
+            throw 'Expected validate-report-set to reject an unrecognized JSON document.'
+        }
+    }
+    finally {
+        Pop-Location
+        Remove-Item -LiteralPath $unknownJsonPath -Force
     }
 
     Copy-Item -LiteralPath $reportSetDir -Destination $missingStartupTransportReportSetDir -Recurse
@@ -3707,8 +3753,8 @@ try {
         throw 'Expected playback quality CLI evaluate-candidate output schemaVersion 1.'
     }
 
-    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.16') {
-        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.16.'
+    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.17') {
+        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.17.'
     }
 
     if ($candidateEvaluation.action -ne 'accept-candidate') {

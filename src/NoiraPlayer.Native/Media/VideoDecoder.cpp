@@ -650,6 +650,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         ID3D11DeviceContext* d3dContext)
     {
         Close();
+        m_decoderEagainRecovery.Reset();
 
         AVCodecContext* codecContext = nullptr;
         AVBufferRef* hardwareDeviceContext = nullptr;
@@ -853,7 +854,6 @@ namespace winrt::NoiraPlayer::Native::implementation
             InspectDolbyVisionPacketSideData(packet.get());
 
             std::optional<DecodedVideoFrame> pendingFrame;
-            DecoderEagainRecovery doubleEagainRecovery;
             while (true)
             {
                 auto sendStartedAt = std::chrono::steady_clock::now();
@@ -862,13 +862,14 @@ namespace winrt::NoiraPlayer::Native::implementation
                     std::chrono::steady_clock::now() - sendStartedAt).count();
                 if (sendResult == 0)
                 {
-                    doubleEagainRecovery.RecordProgress();
+                    m_decoderEagainRecovery.RecordProgress();
                     av_packet_unref(packet.get());
                     break;
                 }
 
                 if (sendResult == AVERROR(EAGAIN))
                 {
+                    m_decoderEagainRecovery.RecordSendPacketEagain();
                     auto receiveResult = 0;
                     auto drainedFrame = TryReceiveFrame(
                         m_codecContext,
@@ -879,7 +880,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                         &receiveResult);
                     if (!drainedFrame)
                     {
-                        if (receiveResult == AVERROR(EAGAIN) && doubleEagainRecovery.TryRecover())
+                        if (receiveResult == AVERROR(EAGAIN) && m_decoderEagainRecovery.TryRecover())
                         {
                             auto diagnostic = CreatePacketDiagnostic(
                                 L"VideoDecoder.SendPacket eagain retry",
@@ -888,7 +889,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                                 m_videoStreamIndex,
                                 m_codecContext);
                             diagnostic += L" receiveResult=" + std::to_wstring(receiveResult) +
-                                L" retry=" + std::to_wstring(doubleEagainRecovery.ConsecutiveRetryCount()) +
+                                L" retry=" + std::to_wstring(m_decoderEagainRecovery.ConsecutiveRetryCount()) +
                                 L" maxRetries=" + std::to_wstring(DecoderEagainRecovery::MaxConsecutiveRetries);
                             AppendNativePlaybackDiagnostic(diagnostic);
                             continue;
@@ -901,7 +902,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                             m_videoStreamIndex,
                             m_codecContext);
                         diagnostic += L" receiveResult=" + std::to_wstring(receiveResult) +
-                            L" retry=" + std::to_wstring(doubleEagainRecovery.ConsecutiveRetryCount()) +
+                            L" retry=" + std::to_wstring(m_decoderEagainRecovery.ConsecutiveRetryCount()) +
                             L" maxRetries=" + std::to_wstring(DecoderEagainRecovery::MaxConsecutiveRetries);
                         AppendNativePlaybackDiagnostic(diagnostic);
                         av_packet_unref(packet.get());
@@ -910,7 +911,7 @@ namespace winrt::NoiraPlayer::Native::implementation
                             L"FFmpeg video decoder made no progress after bounded packet recovery.");
                     }
 
-                    doubleEagainRecovery.RecordProgress();
+                    m_decoderEagainRecovery.RecordProgress();
                     if (!pendingFrame)
                     {
                         pendingFrame = drainedFrame;

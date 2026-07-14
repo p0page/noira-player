@@ -369,6 +369,14 @@ namespace winrt::NoiraPlayer::Native::implementation
         void VideoDecodeQueueMaxDepth(uint64_t value) noexcept { m_videoDecodeQueueMaxDepth = value; }
         uint64_t VideoDecodeQueueProducerWaitCount() const noexcept { return m_videoDecodeQueueProducerWaitCount; }
         void VideoDecodeQueueProducerWaitCount(uint64_t value) noexcept { m_videoDecodeQueueProducerWaitCount = value; }
+        uint64_t VideoDecoderSendPacketEagainCount() const noexcept { return m_videoDecoderSendPacketEagainCount; }
+        void VideoDecoderSendPacketEagainCount(uint64_t value) noexcept { m_videoDecoderSendPacketEagainCount = value; }
+        uint64_t VideoDecoderDoubleEagainRetryCount() const noexcept { return m_videoDecoderDoubleEagainRetryCount; }
+        void VideoDecoderDoubleEagainRetryCount(uint64_t value) noexcept { m_videoDecoderDoubleEagainRetryCount = value; }
+        uint64_t VideoDecoderDoubleEagainRecoveryCount() const noexcept { return m_videoDecoderDoubleEagainRecoveryCount; }
+        void VideoDecoderDoubleEagainRecoveryCount(uint64_t value) noexcept { m_videoDecoderDoubleEagainRecoveryCount = value; }
+        uint64_t VideoDecoderDoubleEagainExhaustedCount() const noexcept { return m_videoDecoderDoubleEagainExhaustedCount; }
+        void VideoDecoderDoubleEagainExhaustedCount(uint64_t value) noexcept { m_videoDecoderDoubleEagainExhaustedCount = value; }
 
         double VideoDecodePacketReadDurationMsP50() const noexcept { return m_videoDecodePacketReadDurationMsP50; }
         void VideoDecodePacketReadDurationMsP50(double value) noexcept { m_videoDecodePacketReadDurationMsP50 = value; }
@@ -746,6 +754,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         uint64_t m_videoDecodeQueueCapacity{0};
         uint64_t m_videoDecodeQueueMaxDepth{0};
         uint64_t m_videoDecodeQueueProducerWaitCount{0};
+        uint64_t m_videoDecoderSendPacketEagainCount{0};
+        uint64_t m_videoDecoderDoubleEagainRetryCount{0};
+        uint64_t m_videoDecoderDoubleEagainRecoveryCount{0};
+        uint64_t m_videoDecoderDoubleEagainExhaustedCount{0};
         double m_videoDecodePacketReadDurationMsP50{0.0};
         double m_videoDecodePacketReadDurationMsP95{0.0};
         double m_videoDecodeSendPacketDurationMsP50{0.0};

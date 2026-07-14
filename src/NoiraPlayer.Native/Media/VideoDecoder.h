@@ -10,6 +10,7 @@
 
 #include "DolbyVisionConfiguration.h"
 #include "D3D11SharedDecodeBridge.h"
+#include "DecoderEagainRecovery.h"
 #include "DxgiColorSpaceMapper.h"
 
 struct AVCodecContext;
@@ -66,6 +67,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         std::optional<DolbyVisionConfiguration> DolbyVisionConfigurationSnapshot() const noexcept;
         bool UsesHardwareDecode() const noexcept { return m_hardwareDeviceContext != nullptr; }
         bool UsesIndependentDecodeDevice() const noexcept { return m_usesIndependentDecodeDevice; }
+        uint64_t SendPacketEagainCount() const noexcept { return m_decoderEagainRecovery.SendPacketEagainCount(); }
+        uint64_t DoubleEagainRetryCount() const noexcept { return m_decoderEagainRecovery.DoubleEagainRetryCount(); }
+        uint64_t DoubleEagainRecoveryCount() const noexcept { return m_decoderEagainRecovery.DoubleEagainRecoveryCount(); }
+        uint64_t DoubleEagainExhaustedCount() const noexcept { return m_decoderEagainRecovery.DoubleEagainExhaustedCount(); }
         bool WaitForFrame(DecodedVideoFrame const& frame) noexcept;
         void Seek(int64_t positionTicks);
         void Flush(int64_t positionTicks);
@@ -82,6 +87,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         int64_t m_positionTicks{0};
         std::optional<DolbyVisionConfiguration> m_dolbyVisionConfiguration;
         D3D11SharedDecodeBridge m_sharedDecodeBridge;
+        DecoderEagainRecovery m_decoderEagainRecovery;
         bool m_usesIndependentDecodeDevice{false};
         bool m_decoderDraining{false};
         bool m_open{false};

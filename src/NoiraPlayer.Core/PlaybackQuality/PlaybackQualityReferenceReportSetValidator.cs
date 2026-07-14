@@ -1378,6 +1378,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     PlaybackQualityCodeTargetCatalog.GetForFailureArea("timeline"));
             }
 
+            if (StartsWithSignal(signal, "timing.videoDecoder"))
+            {
+                return NewTriage(
+                    "decoder-recovery",
+                    "Collect FFmpeg send/receive EAGAIN retry, recovery, and exhaustion evidence before changing decoder recovery behavior.",
+                    PlaybackQualityCodeTargetCatalog.GetForFailureArea("decoder-recovery"));
+            }
+
             if (StartsWithSignal(signal, "timing.") ||
                 string.Equals(signal, "display.refreshRateHz", StringComparison.Ordinal))
             {

@@ -64,6 +64,11 @@ public sealed class ModernPlaybackBoundaryContractTests
             "NoiraPlayer.Native",
             "Media",
             "VideoDecoder.cpp");
+        var header = ReadRepositoryFile(
+            "src",
+            "NoiraPlayer.Native",
+            "Media",
+            "VideoDecoder.h");
         var block = SliceFrom(
             source,
             "if (sendResult == AVERROR(EAGAIN))",
@@ -77,7 +82,8 @@ public sealed class ModernPlaybackBoundaryContractTests
             "FFmpeg video decoder made no progress after bounded packet recovery.",
             StringComparison.Ordinal);
 
-        Assert.Contains("DecoderEagainRecovery doubleEagainRecovery", source, StringComparison.Ordinal);
+        Assert.Contains("DecoderEagainRecovery m_decoderEagainRecovery", header, StringComparison.Ordinal);
+        Assert.Contains("m_decoderEagainRecovery.RecordSendPacketEagain()", block, StringComparison.Ordinal);
         Assert.True(retryIndex >= 0, "double-EAGAIN recovery must emit searchable retry diagnostics.");
         Assert.True(continueIndex > retryIndex, "the same packet must be retried while recovery remains bounded.");
         Assert.True(exhaustedIndex > continueIndex, "retry exhaustion must remain distinguishable from recovery.");

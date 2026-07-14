@@ -63,6 +63,21 @@ public sealed class PlaybackQualityCodeTargetCatalogTests
         Assert.Contains("src/NoiraPlayer.Core/PlaybackQuality/PlaybackQualityReportMapper.cs", targets);
     }
 
+    [Fact]
+    public void DecoderRecovery_Is_A_Known_FailureArea_With_Decoder_Targets()
+    {
+        Assert.True(PlaybackQualityCodeTargetCatalog.IsKnownFailureArea("decoder-recovery"));
+
+        var targets = PlaybackQualityCodeTargetCatalog.GetForFailureArea("decoder-recovery");
+
+        Assert.Contains("src/NoiraPlayer.Native/Media/VideoDecoder.cpp", targets);
+        Assert.Contains("src/NoiraPlayer.Native/Media/DecoderEagainRecovery.h", targets);
+        Assert.Equal(
+            "decoder-recovery",
+            PlaybackQualityCodeTargetCatalog.GetFailureAreaForSignal(
+                "timing.videoDecoderDoubleEagainExhaustedCount"));
+    }
+
     [Theory]
     [InlineData("lifecycle.audio-switch", "tracks")]
     [InlineData("lifecycle.subtitle-switch", "subtitles")]

@@ -1327,6 +1327,10 @@ internal static class NativeHeadlessHarness
             TrySetRequiredUInt64(values, "videoDecodeQueueCapacity", value => metrics.VideoDecodeQueueCapacity = value, out error) &&
             TrySetRequiredUInt64(values, "videoDecodeQueueMaxDepth", value => metrics.VideoDecodeQueueMaxDepth = value, out error) &&
             TrySetRequiredUInt64(values, "videoDecodeQueueProducerWaitCount", value => metrics.VideoDecodeQueueProducerWaitCount = value, out error) &&
+            TrySetRequiredUInt64(values, "videoDecoderSendPacketEagainCount", value => metrics.VideoDecoderSendPacketEagainCount = value, out error) &&
+            TrySetRequiredUInt64(values, "videoDecoderDoubleEagainRetryCount", value => metrics.VideoDecoderDoubleEagainRetryCount = value, out error) &&
+            TrySetRequiredUInt64(values, "videoDecoderDoubleEagainRecoveryCount", value => metrics.VideoDecoderDoubleEagainRecoveryCount = value, out error) &&
+            TrySetRequiredUInt64(values, "videoDecoderDoubleEagainExhaustedCount", value => metrics.VideoDecoderDoubleEagainExhaustedCount = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "videoDecodePacketReadDurationMsP50", value => metrics.VideoDecodePacketReadDurationMsP50 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "videoDecodePacketReadDurationMsP95", value => metrics.VideoDecodePacketReadDurationMsP95 = value, out error) &&
             TrySetRequiredNonNegativeDouble(values, "videoDecodeSendPacketDurationMsP50", value => metrics.VideoDecodeSendPacketDurationMsP50 = value, out error) &&

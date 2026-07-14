@@ -329,6 +329,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         metrics.VideoDecodeQueueCapacity(snapshot.VideoDecodeQueueCapacity);
         metrics.VideoDecodeQueueMaxDepth(snapshot.VideoDecodeQueueMaxDepth);
         metrics.VideoDecodeQueueProducerWaitCount(snapshot.VideoDecodeQueueProducerWaitCount);
+        metrics.VideoDecoderSendPacketEagainCount(snapshot.VideoDecoderSendPacketEagainCount);
+        metrics.VideoDecoderDoubleEagainRetryCount(snapshot.VideoDecoderDoubleEagainRetryCount);
+        metrics.VideoDecoderDoubleEagainRecoveryCount(snapshot.VideoDecoderDoubleEagainRecoveryCount);
+        metrics.VideoDecoderDoubleEagainExhaustedCount(snapshot.VideoDecoderDoubleEagainExhaustedCount);
         metrics.VideoDecodePacketReadDurationMsP50(snapshot.VideoDecodePacketReadDurationMsP50);
         metrics.VideoDecodePacketReadDurationMsP95(snapshot.VideoDecodePacketReadDurationMsP95);
         metrics.VideoDecodeSendPacketDurationMsP50(snapshot.VideoDecodeSendPacketDurationMsP50);

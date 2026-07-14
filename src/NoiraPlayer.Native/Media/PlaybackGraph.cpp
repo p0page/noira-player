@@ -656,6 +656,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         snapshot.VideoDecodeSynchronizationMode = m_videoDecoder.UsesIndependentDecodeDevice()
             ? "shared-fence"
             : "none";
+        snapshot.VideoDecoderSendPacketEagainCount = m_videoDecoder.SendPacketEagainCount();
+        snapshot.VideoDecoderDoubleEagainRetryCount = m_videoDecoder.DoubleEagainRetryCount();
+        snapshot.VideoDecoderDoubleEagainRecoveryCount = m_videoDecoder.DoubleEagainRecoveryCount();
+        snapshot.VideoDecoderDoubleEagainExhaustedCount = m_videoDecoder.DoubleEagainExhaustedCount();
         if (m_videoDecodeWorker)
         {
             auto const queue = m_videoDecodeWorker->Snapshot();

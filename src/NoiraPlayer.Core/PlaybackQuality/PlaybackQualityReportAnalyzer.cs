@@ -3003,6 +3003,10 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(analysis.EvidenceSignals, "timing.videoDecodeQueueCapacity");
                 AddUnique(analysis.EvidenceSignals, "timing.videoDecodeQueueMaxDepth");
                 AddUnique(analysis.EvidenceSignals, "timing.videoDecodeQueueProducerWaitCount");
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecoderSendPacketEagainCount");
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecoderDoubleEagainRetryCount");
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecoderDoubleEagainRecoveryCount");
+                AddUnique(analysis.EvidenceSignals, "timing.videoDecoderDoubleEagainExhaustedCount");
             }
 
             if (report.Timing.VideoDecodePacketReadDurationMsP50 > 0)

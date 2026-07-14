@@ -126,6 +126,10 @@
         public ulong VideoDecodeQueueCapacity { get; set; }
         public ulong VideoDecodeQueueMaxDepth { get; set; }
         public ulong VideoDecodeQueueProducerWaitCount { get; set; }
+        public ulong VideoDecoderSendPacketEagainCount { get; set; }
+        public ulong VideoDecoderDoubleEagainRetryCount { get; set; }
+        public ulong VideoDecoderDoubleEagainRecoveryCount { get; set; }
+        public ulong VideoDecoderDoubleEagainExhaustedCount { get; set; }
         public double VideoDecodePacketReadDurationMsP50 { get; set; }
         public double VideoDecodePacketReadDurationMsP95 { get; set; }
         public double VideoDecodeSendPacketDurationMsP50 { get; set; }

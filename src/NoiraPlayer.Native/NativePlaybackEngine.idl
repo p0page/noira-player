@@ -196,6 +196,10 @@
         UInt64 VideoDecodeQueueCapacity;
         UInt64 VideoDecodeQueueMaxDepth;
         UInt64 VideoDecodeQueueProducerWaitCount;
+        UInt64 VideoDecoderSendPacketEagainCount;
+        UInt64 VideoDecoderDoubleEagainRetryCount;
+        UInt64 VideoDecoderDoubleEagainRecoveryCount;
+        UInt64 VideoDecoderDoubleEagainExhaustedCount;
         Double VideoDecodePacketReadDurationMsP50;
         Double VideoDecodePacketReadDurationMsP95;
         Double VideoDecodeSendPacketDurationMsP50;
