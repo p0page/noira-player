@@ -89,6 +89,28 @@ int main()
     PlaybackQualityMetrics explicitOversleepMetrics;
     explicitOversleepMetrics.RecordAudioAheadWaitMs(20.0, 10.0, 7.0, 0.0, 1);
     assert(explicitOversleepMetrics.Snapshot().AudioAheadWaitOversleepMsMax == 7.0);
+
+    PlaybackQualityMetrics longRunVideoProcessorMetrics;
+    for (auto index = 0; index < 600; ++index)
+    {
+        longRunVideoProcessorMetrics.RecordVideoRenderPhaseSample({
+            VideoRenderPath::VideoProcessor,
+            true,
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0});
+    }
+    auto const longRunVideoProcessorSnapshot = longRunVideoProcessorMetrics.Snapshot();
+    assert(longRunVideoProcessorSnapshot.VideoRenderVideoProcessorFrameCount == 600);
+    assert(longRunVideoProcessorSnapshot.VideoRenderPostProcessFrameCount == 600);
+    assert(longRunVideoProcessorSnapshot.VideoProcessorSetupCpuSampleCount == 600);
+    assert(longRunVideoProcessorSnapshot.VideoProcessorViewTargetCpuSampleCount == 600);
+    assert(longRunVideoProcessorSnapshot.VideoProcessorClearCpuSampleCount == 600);
+    assert(longRunVideoProcessorSnapshot.VideoProcessorBltCpuSampleCount == 600);
+    assert(longRunVideoProcessorSnapshot.VideoProcessorPostProcessCpuSampleCount == 600);
+
     metrics.RecordAudioVideoDriftTicks(200000);
     metrics.RecordAudioVideoDriftTicks(-400000);
 

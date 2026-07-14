@@ -241,6 +241,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         void Reset() noexcept
         {
             m_count = 0;
+            m_totalCount = 0;
             m_replaceIndex = 0;
             m_max = 0.0;
             m_min = 0.0;
@@ -253,6 +254,8 @@ namespace winrt::NoiraPlayer::Native::implementation
             {
                 value = -value;
             }
+
+            ++m_totalCount;
 
             if (m_count == 0)
             {
@@ -312,6 +315,11 @@ namespace winrt::NoiraPlayer::Native::implementation
             return m_count;
         }
 
+        uint64_t TotalCount() const noexcept
+        {
+            return m_totalCount;
+        }
+
         uint64_t CountGreaterThan(double threshold) const noexcept
         {
             auto count = uint64_t{0};
@@ -343,6 +351,7 @@ namespace winrt::NoiraPlayer::Native::implementation
     private:
         std::array<double, 512> m_values{};
         size_t m_count{0};
+        uint64_t m_totalCount{0};
         size_t m_replaceIndex{0};
         double m_max{0.0};
         double m_min{0.0};
@@ -718,7 +727,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.VideoRenderBgraFrameCount = m_videoRenderBgraFrameCount;
             snapshot.VideoRenderPostProcessFrameCount = m_videoRenderPostProcessFrameCount;
             snapshot.VideoProcessorSetupCpuSampleCount =
-                static_cast<uint64_t>(m_videoProcessorSetupCpuDurations.Count());
+                m_videoProcessorSetupCpuDurations.TotalCount();
             snapshot.VideoProcessorSetupCpuDurationMsP50 =
                 m_videoProcessorSetupCpuDurations.Percentile(50);
             snapshot.VideoProcessorSetupCpuDurationMsP95 =
@@ -728,7 +737,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.VideoProcessorSetupCpuDurationMsMax =
                 m_videoProcessorSetupCpuDurations.Max();
             snapshot.VideoProcessorViewTargetCpuSampleCount =
-                static_cast<uint64_t>(m_videoProcessorViewTargetCpuDurations.Count());
+                m_videoProcessorViewTargetCpuDurations.TotalCount();
             snapshot.VideoProcessorViewTargetCpuDurationMsP50 =
                 m_videoProcessorViewTargetCpuDurations.Percentile(50);
             snapshot.VideoProcessorViewTargetCpuDurationMsP95 =
@@ -738,7 +747,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.VideoProcessorViewTargetCpuDurationMsMax =
                 m_videoProcessorViewTargetCpuDurations.Max();
             snapshot.VideoProcessorClearCpuSampleCount =
-                static_cast<uint64_t>(m_videoProcessorClearCpuDurations.Count());
+                m_videoProcessorClearCpuDurations.TotalCount();
             snapshot.VideoProcessorClearCpuDurationMsP50 =
                 m_videoProcessorClearCpuDurations.Percentile(50);
             snapshot.VideoProcessorClearCpuDurationMsP95 =
@@ -748,7 +757,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.VideoProcessorClearCpuDurationMsMax =
                 m_videoProcessorClearCpuDurations.Max();
             snapshot.VideoProcessorBltCpuSampleCount =
-                static_cast<uint64_t>(m_videoProcessorBltCpuDurations.Count());
+                m_videoProcessorBltCpuDurations.TotalCount();
             snapshot.VideoProcessorBltCpuDurationMsP50 =
                 m_videoProcessorBltCpuDurations.Percentile(50);
             snapshot.VideoProcessorBltCpuDurationMsP95 =
@@ -758,7 +767,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.VideoProcessorBltCpuDurationMsMax =
                 m_videoProcessorBltCpuDurations.Max();
             snapshot.VideoProcessorPostProcessCpuSampleCount =
-                static_cast<uint64_t>(m_videoProcessorPostProcessCpuDurations.Count());
+                m_videoProcessorPostProcessCpuDurations.TotalCount();
             snapshot.VideoProcessorPostProcessCpuDurationMsP50 =
                 m_videoProcessorPostProcessCpuDurations.Percentile(50);
             snapshot.VideoProcessorPostProcessCpuDurationMsP95 =
