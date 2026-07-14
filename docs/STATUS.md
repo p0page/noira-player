@@ -1350,3 +1350,13 @@ v0.11 现将 `execution.requestedSampleDurationMs` 作为正式 report signal。
 本轮同时修复两处裁判语义：不完整样本中，实测 transport read wait 足以解释媒体缺口时，比较必须标记为 transport-dominant/insufficient，而不能归咎 Core；fail-to-fail 数值比较按距 expected 的归一化误差判断，不能机械地认为数值升高或降低就是改善。worker 暂时尚未产出下一帧但没有排队音频时，不再计为视频 starvation；等待语义仍保留，因此没有隐藏真实的 A/V starvation。
 
 最新验证为 Core `1094/1094` 通过，完整 native-headless smoke 通过，并真实覆盖重编译 helper、30 秒暂停恢复、网络重连、demux read error recovery、A/V、字幕和 seek/timeline；Modern App Debug x64 也已从当前源码完整编译，生成新的 Core、Native 与 App 产物。最新正式报告位于 ignored 目录 `artifacts/quality-run/independent-d3d11-worker-5ms-candidate-v014-fff4e42.local/`，比较摘要为 `artifacts/quality-run/independent-worker-vs-sync-control-v014-fff4e42-suite.local.json`。这些证据只证明软件播放链路改善；HDMI 输出、真实显示刷新和面板颜色仍不在软件闭环内。
+
+# 2026-07-14 更新：v0.15 禁止 descriptor 冒充 native 视频源证据
+
+一次完整 App-hosted 私有 DV8 实播暴露了裁判缺陷：native 已从实际 bitstream 识别出 DV Profile 8、compatibility id 1 和 HDR10 base layer，但报告仍复制 Emby descriptor 中过期的 SDR/HDR10 分类。旧报告因此可以在真实播放内容与声明元数据不一致时产生错误结论；v0.14 及更早报告只能保留作历史诊断，不能与 v0.15 baseline/candidate 直接比较。
+
+v0.15 现从 `PlaybackGraph::VideoSourceSnapshot()` 贯通实际视频 codec、尺寸、帧率、色彩、HDR/DV profile 与兼容层到 WinRT、App、headless 和 Core。完成态 native 报告必须声明 `source.videoMetadataProvider=native-playback` 与 `source.videoMetadataStatus=observed`；descriptor/manifest 只能表达 declared/expected，缺少 provenance 时 evaluator、strict report-set validator 和 comparator 都会拒绝证据。`observed-media-signature-v2` 只签名 native 实际观测的视频字段与 native 时间轴，不再把仍可能来自 descriptor 的容器、时长和轨道列表伪装成已观测身份；validator 会独立重算签名，伪造或过期 hash 不能通过。
+
+commit `188bba3` 上完成两次完整 App-hosted Debug x64 发布、注册和协议启动复核。公开 HEVC Main10 SDR case 为 pass，实际识别 `1920x1080@60`，解码/渲染 `911/911` 帧；私有 DV8/HDR10 fallback case 为 pass，实际识别 `3840x2160@23.976`、DV Profile 8、compatibility id 1、HDR10 base layer，解码/渲染 `737/736` 帧、丢帧 0。两份报告均为 `native-playback/observed`，v2 hash 经独立 CLI 重算一致。私有地址、凭据、item/source id 和完整报告只存在 ignored/local artifacts。
+
+验证包括 Core `1104/1104`、完整 native-headless 真实媒体 smoke、CLI smoke、baseline/candidate 脚本和 App command 脚本。Release x64 NativeAOT 已完整编译并生成 Native/Core/App 产物，但注册后的 App 在进入 `App.ctor` 前退出，未产出 quality report；Debug x64 同一 commit 的完整 App-hosted 路径正常。该问题按独立的 Release 激活/打包风险保留，不能用 Debug 通过覆盖，也不影响本轮对 native 视频证据来源的修复结论。
