@@ -51,7 +51,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
 
         var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
 
-        Assert.Equal(5, PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion);
+        Assert.Equal(6, PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion);
         Assert.Equal(PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion, analysis.AnalyzerVersion);
     }
 
@@ -1376,6 +1376,118 @@ public sealed class PlaybackQualityReportAnalyzerTests
         Assert.Contains(
             "startup.stage.native.open.component.ffmpeg.open-input.durationMs",
             analysis.Startup.Signals);
+    }
+
+    [Fact]
+    public void Analyze_Preserves_Startup_Transport_Attribution_For_Model()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "startup-transport-attribution",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxStartupDurationMs = 5000,
+                RequireValidatedConversion = false
+            },
+            Startup = new PlaybackQualityStartup
+            {
+                StartupDurationMs = 6500
+            }
+        };
+        var nativeOpen = new PlaybackQualityStartupStage
+        {
+            Name = "native.open",
+            DurationMs = 6500
+        };
+        nativeOpen.Components.Add(new PlaybackQualityStartupComponent
+        {
+            Name = "ffmpeg.open-input",
+            DurationMs = 4000,
+            TransportProvider = "instrumented-ffmpeg-avio",
+            TransportCallEvidenceStatus = "measured",
+            TransportReadCalls = 2,
+            TransportSeekCalls = 3,
+            TransportReadWaitMs = 500,
+            TransportSeekWaitMs = 1800,
+            TransportSeekDistanceBytes = 11_267_416
+        });
+        nativeOpen.Components.Add(new PlaybackQualityStartupComponent
+        {
+            Name = "ffmpeg.find-stream-info",
+            DurationMs = 2400,
+            TransportProvider = "instrumented-ffmpeg-avio",
+            TransportCallEvidenceStatus = "measured",
+            TransportReadCalls = 1,
+            TransportSeekCalls = 4,
+            TransportReadWaitMs = 400,
+            TransportSeekWaitMs = 1700,
+            TransportSeekDistanceBytes = 11_308_958
+        });
+        report.Startup.Stages.Add(nativeOpen);
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("transport-wait-dominant", analysis.Startup.TransportAttribution);
+        Assert.Equal(4400, analysis.Startup.TransportWaitDurationMs);
+        Assert.Equal(0.6769, analysis.Startup.TransportWaitRatio, 4);
+        Assert.Equal(2, analysis.Startup.MeasuredTransportComponentCount);
+        var component = Assert.Single(
+            Assert.Single(analysis.Startup.Stages).Components,
+            item => item.Name == "ffmpeg.open-input");
+        Assert.Equal("instrumented-ffmpeg-avio", component.TransportProvider);
+        Assert.Equal("measured", component.TransportCallEvidenceStatus);
+        Assert.Equal(2UL, component.TransportReadCalls);
+        Assert.Equal(3UL, component.TransportSeekCalls);
+        Assert.Equal(500, component.TransportReadWaitMs);
+        Assert.Equal(1800, component.TransportSeekWaitMs);
+        Assert.Equal(11_267_416UL, component.TransportSeekDistanceBytes);
+        Assert.Contains(
+            "startup.stage.native.open.component.ffmpeg.open-input.transportSeekWaitMs",
+            analysis.Startup.Signals);
+    }
+
+    [Fact]
+    public void Analyze_Labels_Startup_Within_Threshold_Without_Causal_Overclaim()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "startup-within-threshold",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxStartupDurationMs = 5000,
+                RequireValidatedConversion = false
+            },
+            Startup = new PlaybackQualityStartup
+            {
+                StartupDurationMs = 4400
+            }
+        };
+        var nativeOpen = new PlaybackQualityStartupStage
+        {
+            Name = "native.open",
+            DurationMs = 4400
+        };
+        nativeOpen.Components.Add(new PlaybackQualityStartupComponent
+        {
+            Name = "ffmpeg.open-input",
+            DurationMs = 4300,
+            TransportProvider = "instrumented-ffmpeg-avio",
+            TransportCallEvidenceStatus = "measured",
+            TransportReadCalls = 2,
+            TransportSeekCalls = 3,
+            TransportReadWaitMs = 800,
+            TransportSeekWaitMs = 2100
+        });
+        report.Startup.Stages.Add(nativeOpen);
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("pass", report.Result);
+        Assert.Equal("within-threshold", analysis.Startup.TransportAttribution);
+        Assert.Equal(2900, analysis.Startup.TransportWaitDurationMs);
+        Assert.Contains("did not exceed", analysis.Startup.TransportAttributionReason);
     }
 
     [Fact]

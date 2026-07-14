@@ -1109,6 +1109,39 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 return;
             }
 
+            if (report.Startup.StartupDurationMs > expected.MaxStartupDurationMs.Value)
+            {
+                var attribution = PlaybackQualityStartupAttributionPolicy.Assess(
+                    report,
+                    expected.MaxStartupDurationMs.Value);
+                if (string.Equals(
+                        attribution.Attribution,
+                        "transport-wait-dominant",
+                        System.StringComparison.Ordinal))
+                {
+                    var expectedText = Format(expected.MaxStartupDurationMs.Value);
+                    var actualText = Format(report.Startup.StartupDurationMs);
+                    var message = "StartupDurationMs " + actualText +
+                        " exceeded MaxStartupDurationMs " + expectedText +
+                        "; attribution=transport-wait-dominant.";
+                    report.FailureReasons.Add(message);
+                    report.Checks.Add(new PlaybackQualityCheck
+                    {
+                        Name = "StartupDurationMs",
+                        Signal = "startup.startupDurationMs",
+                        Status = "fail",
+                        FailureArea = "startup",
+                        FailureClass = PlaybackQualityFailureClassification.EnvironmentIssue,
+                        Expected = expectedText,
+                        Actual = actualText,
+                        Message = message
+                    });
+                    AddRelevantSignal(report, "startup.startupDurationMs");
+                    AddStartupTransportSignals(report);
+                    return;
+                }
+            }
+
             CheckMax(
                 report,
                 "StartupDurationMs",
@@ -1117,6 +1150,37 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "MaxStartupDurationMs",
                 "startup.startupDurationMs",
                 "startup");
+        }
+
+        private static void AddStartupTransportSignals(PlaybackQualityReport report)
+        {
+            foreach (var stage in report.Startup.Stages)
+            {
+                foreach (var component in stage.Components)
+                {
+                    if (!string.Equals(
+                            component.TransportCallEvidenceStatus,
+                            "measured",
+                            System.StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    var prefix = "startup.stage." + stage.Name + ".component." +
+                        component.Name + ".";
+                    AddRelevantSignal(report, prefix + "transportProvider");
+                    AddRelevantSignal(report, prefix + "transportCallEvidenceStatus");
+                    if (component.TransportReadWaitMs.HasValue)
+                    {
+                        AddRelevantSignal(report, prefix + "transportReadWaitMs");
+                    }
+
+                    if (component.TransportSeekWaitMs.HasValue)
+                    {
+                        AddRelevantSignal(report, prefix + "transportSeekWaitMs");
+                    }
+                }
+            }
         }
 
         private static void CheckExpectedFrameRate(
@@ -1644,7 +1708,21 @@ namespace NoiraPlayer.Core.PlaybackQuality
             if (HasReason(report, "StartupDurationMs"))
             {
                 report.Analysis.PrimaryFailureArea = "startup";
-                report.Analysis.SuggestedNextAction = "Inspect Emby request, source open, demux initialization, and first-frame readiness.";
+                var transportWaitDominant = false;
+                foreach (var check in report.Checks)
+                {
+                    if (check.Status == "fail" &&
+                        check.Name == "StartupDurationMs" &&
+                        check.FailureClass == PlaybackQualityFailureClassification.EnvironmentIssue)
+                    {
+                        transportWaitDominant = true;
+                        break;
+                    }
+                }
+
+                report.Analysis.SuggestedNextAction = transportWaitDominant
+                    ? "Verify startup transport latency before changing Core open or demux policy."
+                    : "Inspect Emby request, source open, demux initialization, and first-frame readiness.";
                 return;
             }
 

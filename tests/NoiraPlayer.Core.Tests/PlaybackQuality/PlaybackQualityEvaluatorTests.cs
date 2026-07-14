@@ -333,6 +333,121 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Blocks_Core_Tuning_When_Startup_Overrun_Is_Transport_Wait_Dominant()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "slow-startup-transport-dominant",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxStartupDurationMs = 5000,
+                RequireValidatedConversion = false
+            },
+            Startup = new PlaybackQualityStartup
+            {
+                StartupDurationMs = 6500
+            }
+        };
+        var nativeOpen = new PlaybackQualityStartupStage
+        {
+            Name = "native.open",
+            DurationMs = 6500
+        };
+        nativeOpen.Components.Add(new PlaybackQualityStartupComponent
+        {
+            Name = "ffmpeg.open-input",
+            DurationMs = 4000,
+            TransportProvider = "instrumented-ffmpeg-avio",
+            TransportCallEvidenceStatus = "measured",
+            TransportReadCalls = 2,
+            TransportSeekCalls = 3,
+            TransportReadWaitMs = 500,
+            TransportSeekWaitMs = 1800
+        });
+        nativeOpen.Components.Add(new PlaybackQualityStartupComponent
+        {
+            Name = "ffmpeg.find-stream-info",
+            DurationMs = 2400,
+            TransportProvider = "instrumented-ffmpeg-avio",
+            TransportCallEvidenceStatus = "measured",
+            TransportReadCalls = 1,
+            TransportSeekCalls = 4,
+            TransportReadWaitMs = 400,
+            TransportSeekWaitMs = 1700
+        });
+        report.Startup.Stages.Add(nativeOpen);
+
+        PlaybackQualityEvaluator.Evaluate(report);
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        var startupCheck = Assert.Single(report.Checks, check =>
+            check.Name == "StartupDurationMs");
+        Assert.Equal("fail", startupCheck.Status);
+        Assert.Equal("startup", startupCheck.FailureArea);
+        Assert.Equal("environment issue", startupCheck.FailureClass);
+        Assert.Contains("attribution=transport-wait-dominant", startupCheck.Message);
+        Assert.Contains(
+            "startup.stage.native.open.component.ffmpeg.open-input.transportSeekWaitMs",
+            report.Analysis.RelevantSignals);
+        Assert.Equal(
+            "Verify startup transport latency before changing Core open or demux policy.",
+            report.Analysis.SuggestedNextAction);
+        Assert.Equal("environment issue", analysis.PrimaryFailureClass);
+        Assert.False(analysis.OptimizationGate.CanOptimizePlaybackCore);
+        Assert.Contains(
+            "failureClass.environment issue",
+            analysis.OptimizationGate.Blockers);
+    }
+
+    [Fact]
+    public void Evaluate_Keeps_Core_Attribution_When_Startup_Transport_Wait_Is_Not_Dominant()
+    {
+        var report = new PlaybackQualityReport
+        {
+            RunId = "slow-startup-processing-dominant",
+            Expected = new PlaybackQualityExpected
+            {
+                MaxStartupDurationMs = 5000,
+                RequireValidatedConversion = false
+            },
+            Startup = new PlaybackQualityStartup
+            {
+                StartupDurationMs = 6500
+            }
+        };
+        var nativeOpen = new PlaybackQualityStartupStage
+        {
+            Name = "native.open",
+            DurationMs = 6500
+        };
+        nativeOpen.Components.Add(new PlaybackQualityStartupComponent
+        {
+            Name = "ffmpeg.open-input",
+            DurationMs = 4000,
+            TransportProvider = "instrumented-ffmpeg-avio",
+            TransportCallEvidenceStatus = "measured",
+            TransportReadCalls = 2,
+            TransportSeekCalls = 1,
+            TransportReadWaitMs = 200,
+            TransportSeekWaitMs = 100
+        });
+        report.Startup.Stages.Add(nativeOpen);
+
+        PlaybackQualityEvaluator.Evaluate(report);
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        var startupCheck = Assert.Single(report.Checks, check =>
+            check.Name == "StartupDurationMs");
+        Assert.Equal("player-core bug", startupCheck.FailureClass);
+        Assert.DoesNotContain("attribution=transport-wait-dominant", startupCheck.Message);
+        Assert.Equal("startup-processing-dominant", analysis.Startup.TransportAttribution);
+        Assert.Equal("player-core bug", analysis.PrimaryFailureClass);
+        Assert.DoesNotContain(
+            "failureClass.environment issue",
+            analysis.OptimizationGate.Blockers);
+    }
+
+    [Fact]
     public void Evaluate_Fails_When_Startup_Duration_Is_Required_But_Missing()
     {
         var report = new PlaybackQualityReport

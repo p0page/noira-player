@@ -722,8 +722,8 @@ try {
         throw 'Expected analyze-report-set output schemaVersion 1.'
     }
 
-    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.17') {
-        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.17.'
+    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.18') {
+        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.18.'
     }
 
     if ($analysisSet.action -ne 'fix-report-analysis') {
@@ -1037,8 +1037,8 @@ try {
         throw 'Expected playback quality CLI plan-runs output schemaVersion 1.'
     }
 
-    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.17') {
-        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.17.'
+    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.18') {
+        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.18.'
     }
 
     if ($runPlan.caseCount -ne 3) {
@@ -1088,7 +1088,7 @@ try {
 
     $materializedBaselineSummary = Get-Content -Raw -LiteralPath $materializedBaselineSummaryPath | ConvertFrom-Json
     if ($materializedBaselineSummary.schemaVersion -ne 1 -or
-        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.17' -or
+        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.18' -or
         $materializedBaselineSummary.caseCount -ne 3 -or
         $materializedBaselineSummary.reportsDirectory -ne $materializedBaselineDir) {
         throw 'Expected materialize-baseline-report-set summary to describe generated reports.'
@@ -3753,8 +3753,8 @@ try {
         throw 'Expected playback quality CLI evaluate-candidate output schemaVersion 1.'
     }
 
-    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.17') {
-        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.17.'
+    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.18') {
+        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.18.'
     }
 
     if ($candidateEvaluation.action -ne 'accept-candidate') {
@@ -4842,7 +4842,7 @@ try {
     ]
   },
   "modelAnalysis": {
-    "analyzerVersion": 5,
+    "analyzerVersion": 6,
     "runId": "item-1/source-1",
     "result": "fail",
     "suggestedNextAction": "Collect a longer playback sample before optimizing playback Core.",
@@ -5071,7 +5071,7 @@ try {
     ]
   },
   "modelAnalysis": {
-    "analyzerVersion": 5,
+    "analyzerVersion": 6,
     "runId": "item-1/source-1",
     "result": "fail",
     "suggestedNextAction": "Collect comparable source metadata before optimizing playback Core.",

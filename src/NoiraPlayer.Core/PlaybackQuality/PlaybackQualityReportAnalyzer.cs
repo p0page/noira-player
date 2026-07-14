@@ -51,6 +51,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public double DominantStageDurationMs { get; set; }
         public double AttributedDurationMs { get; set; }
         public double UnattributedDurationMs { get; set; }
+        public string TransportAttribution { get; set; } = "not-evaluated";
+        public string TransportAttributionReason { get; set; } = "";
+        public double TransportWaitDurationMs { get; set; }
+        public double TransportWaitRatio { get; set; }
+        public int MeasuredTransportComponentCount { get; set; }
         public List<PlaybackQualityStartupStageAssessment> Stages { get; } =
             new List<PlaybackQualityStartupStageAssessment>();
         public List<string> Signals { get; } = new List<string>();
@@ -74,6 +79,13 @@ namespace NoiraPlayer.Core.PlaybackQuality
     {
         public string Name { get; set; } = "";
         public double DurationMs { get; set; }
+        public string TransportProvider { get; set; } = "";
+        public string TransportCallEvidenceStatus { get; set; } = "not-applicable";
+        public ulong? TransportReadCalls { get; set; }
+        public ulong? TransportSeekCalls { get; set; }
+        public double? TransportReadWaitMs { get; set; }
+        public double? TransportSeekWaitMs { get; set; }
+        public ulong? TransportSeekDistanceBytes { get; set; }
     }
 
     public sealed class PlaybackQualityLifecycleAssessment
@@ -302,7 +314,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
     public static class PlaybackQualityReportAnalyzer
     {
-        public const int CurrentAnalyzerVersion = 5;
+        public const int CurrentAnalyzerVersion = 6;
 
         public static PlaybackQualityModelAnalysis Analyze(PlaybackQualityReport report)
         {
@@ -844,7 +856,14 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     stageAssessment.Components.Add(new PlaybackQualityStartupComponentAssessment
                     {
                         Name = component.Name,
-                        DurationMs = component.DurationMs
+                        DurationMs = component.DurationMs,
+                        TransportProvider = component.TransportProvider,
+                        TransportCallEvidenceStatus = component.TransportCallEvidenceStatus,
+                        TransportReadCalls = component.TransportReadCalls,
+                        TransportSeekCalls = component.TransportSeekCalls,
+                        TransportReadWaitMs = component.TransportReadWaitMs,
+                        TransportSeekWaitMs = component.TransportSeekWaitMs,
+                        TransportSeekDistanceBytes = component.TransportSeekDistanceBytes
                     });
                     stageAssessment.ComponentAttributedDurationMs += Math.Max(0, component.DurationMs);
                     if (!string.IsNullOrWhiteSpace(stage.Name) &&
@@ -855,6 +874,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                             startup.Signals,
                             "startup.stage." + stage.Name + ".component." + component.Name + ".durationMs");
                     }
+
+                    AddStartupTransportSignals(startup, stage, component);
 
                     if (component.DurationMs > stageAssessment.DominantComponentDurationMs)
                     {
@@ -885,6 +906,19 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 0,
                 startup.StartupDurationMs - startup.AttributedDurationMs);
 
+            if (report.Expected?.MaxStartupDurationMs.HasValue == true)
+            {
+                var attribution = PlaybackQualityStartupAttributionPolicy.Assess(
+                    report,
+                    report.Expected.MaxStartupDurationMs.Value);
+                startup.TransportAttribution = attribution.Attribution;
+                startup.TransportAttributionReason = attribution.Reason;
+                startup.TransportWaitDurationMs = attribution.TransportWaitDurationMs;
+                startup.TransportWaitRatio = attribution.TransportWaitRatio;
+                startup.MeasuredTransportComponentCount =
+                    attribution.MeasuredTransportComponentCount;
+            }
+
             foreach (var check in report.Checks)
             {
                 if (check.Status == "fail" &&
@@ -913,6 +947,55 @@ namespace NoiraPlayer.Core.PlaybackQuality
             startup.Status = "ready";
             startup.Reason = "Startup telemetry is available and no startup threshold failed.";
             return startup;
+        }
+
+        private static void AddStartupTransportSignals(
+            PlaybackQualityStartupAssessment startup,
+            PlaybackQualityStartupStage stage,
+            PlaybackQualityStartupComponent component)
+        {
+            if (string.IsNullOrWhiteSpace(stage.Name) ||
+                string.IsNullOrWhiteSpace(component.Name))
+            {
+                return;
+            }
+
+            var prefix = "startup.stage." + stage.Name + ".component." +
+                component.Name + ".";
+            if (!string.IsNullOrWhiteSpace(component.TransportProvider))
+            {
+                AddUnique(startup.Signals, prefix + "transportProvider");
+            }
+
+            if (!string.IsNullOrWhiteSpace(component.TransportCallEvidenceStatus))
+            {
+                AddUnique(startup.Signals, prefix + "transportCallEvidenceStatus");
+            }
+
+            if (component.TransportReadCalls.HasValue)
+            {
+                AddUnique(startup.Signals, prefix + "transportReadCalls");
+            }
+
+            if (component.TransportSeekCalls.HasValue)
+            {
+                AddUnique(startup.Signals, prefix + "transportSeekCalls");
+            }
+
+            if (component.TransportReadWaitMs.HasValue)
+            {
+                AddUnique(startup.Signals, prefix + "transportReadWaitMs");
+            }
+
+            if (component.TransportSeekWaitMs.HasValue)
+            {
+                AddUnique(startup.Signals, prefix + "transportSeekWaitMs");
+            }
+
+            if (component.TransportSeekDistanceBytes.HasValue)
+            {
+                AddUnique(startup.Signals, prefix + "transportSeekDistanceBytes");
+            }
         }
 
         private static PlaybackQualityLifecycleAssessment AssessLifecycle(

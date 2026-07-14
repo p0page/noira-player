@@ -58,7 +58,7 @@ public sealed class PlaybackQualityDecoderEagainEvidenceContractTests
             "PlaybackQualityReportComposer.cs");
 
         Assert.Contains(
-            "CurrentEvaluationVersion = \"playback-quality-v0.17\"",
+            "CurrentEvaluationVersion = \"playback-quality-v0.18\"",
             composer,
             StringComparison.Ordinal);
     }
