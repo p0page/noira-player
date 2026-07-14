@@ -109,6 +109,10 @@ internal static class Program
         try
         {
             var startedAt = DateTimeOffset.UtcNow;
+            var isRuntimeSourceMapRequired = string.Equals(
+                errorCode.Trim(),
+                "runtime-source-map-required",
+                StringComparison.OrdinalIgnoreCase);
             var referenceCase = new PlaybackQualityReferenceCase
             {
                 CaseId = caseId.Trim(),
@@ -124,11 +128,19 @@ internal static class Program
                 new PlaybackQualityError
                 {
                     Code = "manifest-runner.source-resolution-failed",
-                    Message = "The private Emby source could not be resolved: " + SanitizeErrorCode(errorCode) + ".",
-                    Operation = "resolve-emby-source",
-                    ExceptionType = "source-resolution",
-                    FailureClass = PlaybackQualityFailureClassification.ExternalServiceOrProtocolIssue,
-                    FailureArea = "unsupported-source",
+                    Message = "The manifest source locator could not be resolved: " + SanitizeErrorCode(errorCode) + ".",
+                    Operation = isRuntimeSourceMapRequired
+                        ? "resolve-runtime-source"
+                        : "resolve-emby-source",
+                    ExceptionType = isRuntimeSourceMapRequired
+                        ? "harness-source-resolution"
+                        : "source-resolution",
+                    FailureClass = isRuntimeSourceMapRequired
+                        ? PlaybackQualityFailureClassification.EvaluationHarnessBug
+                        : PlaybackQualityFailureClassification.ExternalServiceOrProtocolIssue,
+                    FailureArea = isRuntimeSourceMapRequired
+                        ? "evidence-collection"
+                        : "unsupported-source",
                     IsTerminal = true,
                     IsRetriable = true
                 },

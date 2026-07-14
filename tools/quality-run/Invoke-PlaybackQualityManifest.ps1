@@ -197,6 +197,29 @@ foreach ($case in $selectedCases) {
         }
     }
 
+    if ($null -eq $runtimeOverride -and
+        $sourceLocator.StartsWith('local-fault://', [System.StringComparison]::OrdinalIgnoreCase)) {
+        $errorCode = 'runtime-source-map-required'
+        $errorReportExitCode = Write-PlaybackQualitySourceResolutionError `
+            -CaseId $currentCaseId `
+            -SourceLocator $sourceLocator `
+            -ReportsDir $ReportsDir `
+            -ErrorCode $errorCode `
+            -Scenario $scenario `
+            -ResolverProjectPath $SourceResolverProjectPath
+        $attempts.Add([pscustomobject]@{
+            caseId = $currentCaseId
+            status = 'unresolved-source'
+            exitCode = $errorReportExitCode
+            reportPresent = (Test-Path -LiteralPath $reportPath)
+            reportResult = Get-PlaybackQualityReportResult $reportPath
+            durationMs = 0
+            errorCode = $errorCode
+            sourceResolutionAttemptCount = 0
+        })
+        continue
+    }
+
     if ([string]::IsNullOrWhiteSpace($streamUrl)) {
         $attempts.Add([pscustomobject]@{
             caseId = $currentCaseId

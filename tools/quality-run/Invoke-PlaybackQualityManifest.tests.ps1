@@ -136,6 +136,24 @@ try {
       }
     },
     {
+      "caseId": "runner/runtime-source-required",
+      "category": "stable",
+      "severity": "critical",
+      "stability": "stable",
+      "uri": "local-fault://runtime-source-required",
+      "pauseSeconds": 1,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "pause-resume" },
+      "purpose": [ "pause-resume", "network-recovery" ],
+      "expected": {
+        "codec": "h264",
+        "width": 320,
+        "height": 180,
+        "frameRate": 30,
+        "hdrKind": "Sdr",
+        "isDirectPlayable": true
+      }
+    },
+    {
       "caseId": "runner/quarantine-omitted",
       "category": "quarantine",
       "severity": "low",
@@ -279,7 +297,8 @@ exit 0
         'runner/emby-resolved',
         'runner/audio-switch',
         'runner/subtitle-switch',
-        'runner/emby-unresolved')) {
+        'runner/emby-unresolved',
+        'runner/runtime-source-required')) {
         $reportPath = Join-Path $reportsDir ($caseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json')
         if (-not (Test-Path -LiteralPath $reportPath)) {
             throw ('Manifest runner did not preserve a per-case report for ' + $caseId)
@@ -301,16 +320,29 @@ exit 0
         throw 'Unresolved Emby source must produce an attributable structured orchestration error without claiming a source-open attempt.'
     }
 
+    $runtimeSourceRequiredReport = Get-Content `
+        -LiteralPath (Join-Path $reportsDir 'runner\runtime-source-required.json') `
+        -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($runtimeSourceRequiredReport.report.result -ne 'error' -or
+        $runtimeSourceRequiredReport.report.error.code -ne 'manifest-runner.source-resolution-failed' -or
+        $runtimeSourceRequiredReport.report.error.message -notmatch 'runtime-source-map-required' -or
+        $runtimeSourceRequiredReport.report.error.failureClass -ne 'evaluation harness bug' -or
+        $runtimeSourceRequiredReport.report.error.failureArea -ne 'evidence-collection' -or
+        $runtimeSourceRequiredReport.report.error.operation -ne 'resolve-runtime-source' -or
+        $runtimeSourceRequiredReport.report.execution.sourceOpenAttempted) {
+        throw 'A local-fault locator without a runtime source map must fail before native source open with attributable evidence.'
+    }
+
     $summary = Get-Content -LiteralPath $summaryPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    if ($summary.selectedCaseCount -ne 6 -or
+    if ($summary.selectedCaseCount -ne 7 -or
         $summary.attemptedCaseCount -ne 5 -or
-        $summary.reportCount -ne 6 -or
+        $summary.reportCount -ne 7 -or
         $summary.failedAttemptCount -ne 1 -or
         $summary.passReportCount -ne 4 -or
-        $summary.errorReportCount -ne 2 -or
-        $summary.nonPassReportCount -ne 2 -or
+        $summary.errorReportCount -ne 3 -or
+        $summary.nonPassReportCount -ne 3 -or
         $summary.unknownReportCount -ne 0 -or
-        $summary.unresolvedSourceCount -ne 1 -or
+        $summary.unresolvedSourceCount -ne 2 -or
         $summary.resolvedSourceCount -ne 1 -or
         $summary.missingReportCount -ne 0 -or
         $summary.seekPacketCacheEnabled -ne $true) {

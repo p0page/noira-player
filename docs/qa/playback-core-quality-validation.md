@@ -179,6 +179,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\quality-run\New-Playba
 
 默认流程先运行 native-headless smoke 以构建 helper 和本地 cadence/HDR 样本，再让公开与私有 core manifest 的每个 stable/challenge case 进入 `Invoke-PlaybackQualityManifest.ps1`。某个 case 可以诚实产生 `fail`、`error` 或 `unsupported`，只要报告完整且 execution 与源可归因，baseline 仍可生成；缺报告、空选择、源解析只有 orchestration 证据或 strict validation 失败都会终止命令。`-SkipNativeHeadless` 只跳过附加的本地生成样本，不跳过 core manifest 播放，此时必须显式提供 `-NativeHelperExe`。
 
+`local-fault://` 是动态故障注入 locator，不是可直接打开的媒体 URI。它必须由本轮 harness 通过 `-RuntimeSourceMapPath` 解析为仍在运行的 localhost 服务；归档 unified manifest 不能单独重放这类 case。缺少 runtime source map 时，runner 必须在 native source open 之前写入 `runtime-source-map-required` 结构化 error report，并记录 `attempted=0`、`unresolved=1`、`sourceOpenAttempted=false`。要重跑这些 case，应重新执行 `New-PlaybackCoreTuningBaseline.ps1` 或对应 native smoke，让 harness 重建故障服务器和 runtime map；不得把占位 locator 直接交给 native helper，也不得把该错误归因给播放器 Core。
+
 章节 metadata 不作为所有 case 的硬性 required signal。若服务端在 playback-info media source 中返回 chapters，报告和 `metadata-duration` capability coverage 会暴露 `source.hasChapterMetadata`、`source.chapterCount`、`source.chapters.startPositionTicks`、`source.chapters.name` 和 `source.chapters.imageTag` 证据；缺失 chapters 字段、明确空数组和有章节明细需要分开解释。这些信号只证明章节 metadata 已进入报告，不证明章节 UI、章节跳转或按章节 seek 行为。
 
 ## Materialize Source-Only Evaluator Fixture
