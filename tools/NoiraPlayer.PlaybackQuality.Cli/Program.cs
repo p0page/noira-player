@@ -78,6 +78,11 @@ internal static class Program
                 return RunCompareSuite(args);
             }
 
+            if (string.Equals(args[0], "compare-render-phases", StringComparison.OrdinalIgnoreCase))
+            {
+                return RunCompareRenderPhases(args);
+            }
+
             if (string.Equals(args[0], "validate-manifest", StringComparison.OrdinalIgnoreCase))
             {
                 return RunValidateManifest(args);
@@ -230,6 +235,111 @@ internal static class Program
         var options = ParseCompareSuiteOptions(args);
         WriteJson(CompareSuite(options), options.OutputPath);
         return 0;
+    }
+
+    private static int RunCompareRenderPhases(string[] args)
+    {
+        var options = ParseCompareRenderPhasesOptions(args);
+        var manifest = ReadJson<PlaybackQualityReferenceManifest>(options.ManifestPath);
+        var output = new RenderPhaseDiagnosticSuiteOutput
+        {
+            ManifestValidation = PlaybackQualityReferenceManifestValidator.Validate(manifest),
+            RepeatCount = options.BaselineDirectories.Count,
+            CaseCount = manifest.Cases.Count,
+            ExpectedPairCount = manifest.Cases.Count * options.BaselineDirectories.Count
+        };
+
+        if (!output.ManifestValidation.IsValid)
+        {
+            AddUnique(output.Blockers, "manifest.invalid");
+        }
+
+        for (var index = 0; index < options.BaselineDirectories.Count; index++)
+        {
+            var repeatIndex = index + 1;
+            var baselineEnvelopes = ReadPlaybackQualityReportEnvelopes(options.BaselineDirectories[index]);
+            var candidateEnvelopes = ReadPlaybackQualityReportEnvelopes(options.CandidateDirectories[index]);
+            var baselineEntries = SelectManifestReportSetEntries(manifest, baselineEnvelopes);
+            var candidateEntries = SelectManifestReportSetEntries(manifest, candidateEnvelopes);
+            var repeat = new RenderPhaseDiagnosticRepeat
+            {
+                RepeatIndex = repeatIndex,
+                BaselineReportSetValidation = PlaybackQualityReferenceReportSetValidator.Validate(
+                    manifest,
+                    baselineEntries),
+                CandidateReportSetValidation = PlaybackQualityReferenceReportSetValidator.Validate(
+                    manifest,
+                    candidateEntries)
+            };
+            output.Repeats.Add(repeat);
+
+            if (!repeat.BaselineReportSetValidation.IsValid)
+            {
+                repeat.Status = "insufficient-evidence";
+                AddUnique(repeat.Blockers, "baseline-report-set.invalid");
+                AddUnique(output.Blockers, "repeat-" + repeatIndex + ".baseline-report-set.invalid");
+            }
+
+            if (!repeat.CandidateReportSetValidation.IsValid)
+            {
+                repeat.Status = "insufficient-evidence";
+                AddUnique(repeat.Blockers, "candidate-report-set.invalid");
+                AddUnique(output.Blockers, "repeat-" + repeatIndex + ".candidate-report-set.invalid");
+            }
+
+            if (repeat.Blockers.Count > 0 || !output.ManifestValidation.IsValid)
+            {
+                continue;
+            }
+
+            var baselineByRunId = CreateUniqueReportMap(baselineEntries);
+            var candidateByRunId = CreateUniqueReportMap(candidateEntries);
+            foreach (var referenceCase in manifest.Cases)
+            {
+                if (!baselineByRunId.TryGetValue(referenceCase.CaseId, out var baseline) ||
+                    !candidateByRunId.TryGetValue(referenceCase.CaseId, out var candidate))
+                {
+                    repeat.Status = "insufficient-evidence";
+                    AddUnique(repeat.Blockers, "case-pair.missing:" + referenceCase.CaseId);
+                    AddUnique(output.Blockers, "repeat-" + repeatIndex + ".case-pair.missing");
+                    continue;
+                }
+
+                var comparison = PlaybackQualityRenderPhaseComparator.Compare(
+                    baseline.Report,
+                    candidate.Report,
+                    referenceCase.CaseId,
+                    repeatIndex);
+                output.Comparisons.Add(comparison);
+                repeat.ComparisonCount++;
+                if (comparison.Status == "comparable")
+                {
+                    repeat.ComparableCount++;
+                    output.ComparablePairCount++;
+                }
+                else
+                {
+                    repeat.InsufficientEvidenceCount++;
+                    output.InsufficientEvidencePairCount++;
+                    AddUnique(
+                        output.Blockers,
+                        "repeat-" + repeatIndex + ".case.insufficient-evidence:" + referenceCase.CaseId);
+                }
+            }
+
+            repeat.Status = repeat.ComparisonCount == manifest.Cases.Count &&
+                repeat.InsufficientEvidenceCount == 0
+                    ? "complete"
+                    : "insufficient-evidence";
+        }
+
+        output.Status = output.Blockers.Count == 0 &&
+            output.Comparisons.Count == output.ExpectedPairCount &&
+            output.ComparablePairCount == output.ExpectedPairCount
+                ? "complete"
+                : "insufficient-evidence";
+        WriteJson(output, options.OutputPath);
+        return output.Status == "complete" ? 0 : 2;
     }
 
     private static PlaybackQualityComparisonSuite CompareSuite(
@@ -683,6 +793,50 @@ internal static class Program
         return options;
     }
 
+    private static CompareRenderPhasesOptions ParseCompareRenderPhasesOptions(string[] args)
+    {
+        var options = new CompareRenderPhasesOptions();
+        for (var index = 1; index < args.Length; index++)
+        {
+            var arg = args[index];
+            switch (arg)
+            {
+                case "--manifest":
+                    options.ManifestPath = ReadValue(args, ref index, arg);
+                    break;
+                case "--baseline-dir":
+                    options.BaselineDirectories.Add(ReadValue(args, ref index, arg));
+                    break;
+                case "--candidate-dir":
+                    options.CandidateDirectories.Add(ReadValue(args, ref index, arg));
+                    break;
+                case "--output":
+                    options.OutputPath = ReadValue(args, ref index, arg);
+                    break;
+                default:
+                    throw new ArgumentException("Unknown compare-render-phases option: " + arg);
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(options.ManifestPath))
+        {
+            throw new ArgumentException("Missing required option --manifest.");
+        }
+
+        if (options.BaselineDirectories.Count == 0)
+        {
+            throw new ArgumentException("At least one --baseline-dir is required.");
+        }
+
+        if (options.BaselineDirectories.Count != options.CandidateDirectories.Count)
+        {
+            throw new ArgumentException(
+                "--baseline-dir and --candidate-dir must be provided in equal counts and paired order.");
+        }
+
+        return options;
+    }
+
     private static PlanRunsOptions ParsePlanRunsOptions(string[] args)
     {
         var options = new PlanRunsOptions();
@@ -1121,6 +1275,56 @@ internal static class Program
         }
 
         return entries;
+    }
+
+    private static List<PlaybackQualityReferenceReportSetEntry> SelectManifestReportSetEntries(
+        PlaybackQualityReferenceManifest manifest,
+        List<PlaybackQualityReportEnvelope> envelopes)
+    {
+        var caseIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var referenceCase in manifest.Cases)
+        {
+            caseIds.Add(referenceCase.CaseId ?? "");
+        }
+
+        var selected = new List<PlaybackQualityReferenceReportSetEntry>();
+        foreach (var envelope in envelopes)
+        {
+            if (!caseIds.Contains(envelope.Report.RunId ?? ""))
+            {
+                continue;
+            }
+
+            var entry = new PlaybackQualityReferenceReportSetEntry(envelope.Report)
+            {
+                HasSignalPresenceEvidence = envelope.HasSignalPresenceEvidence
+            };
+            foreach (var signal in envelope.PresentSignals)
+            {
+                AddUnique(entry.PresentSignals, signal);
+            }
+
+            selected.Add(entry);
+        }
+
+        return selected;
+    }
+
+    private static Dictionary<string, PlaybackQualityReferenceReportSetEntry> CreateUniqueReportMap(
+        List<PlaybackQualityReferenceReportSetEntry> entries)
+    {
+        var reports = new Dictionary<string, PlaybackQualityReferenceReportSetEntry>(StringComparer.Ordinal);
+        foreach (var entry in entries)
+        {
+            var runId = entry.Report.RunId ?? "";
+            if (!reports.TryAdd(runId, entry))
+            {
+                throw new InvalidOperationException(
+                    "Playback quality report runId is duplicated after strict validation: " + runId);
+            }
+        }
+
+        return reports;
     }
 
     private static List<PlaybackQualityReportEnvelope> ReadPlaybackQualityReportEnvelopes(
@@ -3787,6 +3991,7 @@ internal static class Program
         writer.WriteLine("  playback-quality compare --baseline <report.json> --candidate <report.json> [--previous <comparison.json>...] [--stall-threshold <n>] [--output <comparison.json>]");
         writer.WriteLine("  playback-quality summarize --comparison <comparison.json> [--comparison <comparison.json>...] [--output <suite.json>]");
         writer.WriteLine("  playback-quality compare-suite --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--match-by relative-path|run-id] [--previous-comparisons-dir <comparison-dir>] [--comparisons-dir <comparison-dir>] [--stall-threshold <n>] [--output <suite.json>]");
+        writer.WriteLine("  playback-quality compare-render-phases --manifest <reference-manifest.json> --baseline-dir <reports-dir> --candidate-dir <reports-dir> [--baseline-dir <repeat-2-reports-dir> --candidate-dir <repeat-2-reports-dir> ...] [--output <diagnostic.json>]");
         writer.WriteLine("  playback-quality validate-manifest --manifest <reference-manifest.json> [--output <validation.json>]");
         writer.WriteLine("  playback-quality validate-report-set --manifest <reference-manifest.json> --reports-dir <reports-dir> [--output <validation.json>]");
         writer.WriteLine("  playback-quality plan-runs --manifest <reference-manifest.json> [--reports-dir <reports-dir>] [--duration <seconds>] [--source-revision <revision>] [--purpose <purpose>...] [--max-tier <0-4>] [--output <run-plan.json>]");
@@ -3854,6 +4059,56 @@ internal static class Program
         public string OutputPath { get; set; } = "";
         public string MatchBy { get; set; } = "relative-path";
         public int StallComparisonCountThreshold { get; set; } = 2;
+    }
+
+    private sealed class CompareRenderPhasesOptions
+    {
+        public string ManifestPath { get; set; } = "";
+        public string OutputPath { get; set; } = "";
+        public List<string> BaselineDirectories { get; } = new List<string>();
+        public List<string> CandidateDirectories { get; } = new List<string>();
+    }
+
+    private sealed class RenderPhaseDiagnosticSuiteOutput
+    {
+        public int SchemaVersion { get; set; } = 1;
+        public string EvaluationVersion { get; set; } =
+            PlaybackQualityRunResult.CurrentEvaluationVersion;
+        public string DiagnosticScope { get; set; } = "video-render-phases";
+        public string DecisionAuthority { get; set; } = "none";
+        public string Status { get; set; } = "insufficient-evidence";
+        public int RepeatCount { get; set; }
+        public int CaseCount { get; set; }
+        public int ExpectedPairCount { get; set; }
+        public int ComparablePairCount { get; set; }
+        public int InsufficientEvidencePairCount { get; set; }
+        public PlaybackQualityReferenceManifestValidation ManifestValidation { get; set; } =
+            new PlaybackQualityReferenceManifestValidation();
+        public List<RenderPhaseDiagnosticRepeat> Repeats { get; } =
+            new List<RenderPhaseDiagnosticRepeat>();
+        public List<PlaybackQualityRenderPhaseComparison> Comparisons { get; } =
+            new List<PlaybackQualityRenderPhaseComparison>();
+        public List<string> Blockers { get; } = new List<string>();
+        public List<string> Limitations { get; } = new List<string>
+        {
+            "diagnostic-only: this output cannot accept or reject the overall playback candidate",
+            "every repeat is strict-validated against the same manifest before phase comparison",
+            "extra reports outside the manifest are ignored; missing or duplicate manifest reports block that repeat"
+        };
+    }
+
+    private sealed class RenderPhaseDiagnosticRepeat
+    {
+        public int RepeatIndex { get; set; }
+        public string Status { get; set; } = "complete";
+        public int ComparisonCount { get; set; }
+        public int ComparableCount { get; set; }
+        public int InsufficientEvidenceCount { get; set; }
+        public PlaybackQualityReferenceReportSetValidation BaselineReportSetValidation { get; set; } =
+            new PlaybackQualityReferenceReportSetValidation();
+        public PlaybackQualityReferenceReportSetValidation CandidateReportSetValidation { get; set; } =
+            new PlaybackQualityReferenceReportSetValidation();
+        public List<string> Blockers { get; } = new List<string>();
     }
 
     private sealed class EvaluateCandidateOptions : CompareSuiteOptions

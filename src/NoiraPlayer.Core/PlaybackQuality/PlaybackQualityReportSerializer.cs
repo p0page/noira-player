@@ -24,6 +24,13 @@ namespace NoiraPlayer.Core.PlaybackQuality
             return JsonSerializer.Serialize(comparison, PlaybackQualityJsonContext.Default.PlaybackQualityRunComparison);
         }
 
+        public static string Serialize(PlaybackQualityRenderPhaseComparison comparison)
+        {
+            return JsonSerializer.Serialize(
+                comparison,
+                PlaybackQualityJsonContext.Default.PlaybackQualityRenderPhaseComparison);
+        }
+
         public static string Serialize(PlaybackQualityComparisonSuite suite)
         {
             return JsonSerializer.Serialize(suite, PlaybackQualityJsonContext.Default.PlaybackQualityComparisonSuite);

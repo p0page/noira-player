@@ -10,6 +10,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
     [JsonSerializable(typeof(PlaybackQualityModelAnalysis))]
     [JsonSerializable(typeof(PlaybackQualityRunResult))]
     [JsonSerializable(typeof(PlaybackQualityRunComparison))]
+    [JsonSerializable(typeof(PlaybackQualityRenderPhaseComparison))]
     [JsonSerializable(typeof(PlaybackQualityComparisonSuite))]
     [JsonSerializable(typeof(PlaybackQualityExecutionEvidence))]
     [JsonSerializable(typeof(PlaybackQualityExecutionRequirement))]
