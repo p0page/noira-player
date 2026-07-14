@@ -12,6 +12,8 @@
 
 这次私有运行因启动约 9.0 秒和 21 次视频饥饿仍为 fail。运行期间存在其他播放负载，因此这些性能值只用于暴露环境争用，不进入 baseline/candidate 性能裁决；seek 目标、demux 目标、首帧落点和后续推进等功能证据仍有效。并行播放不会把 fail 改成 pass，也不能成为放宽阈值的理由。Core 全量 `1145/1145` 通过；`run-playback-core-checks.ps1 -AppDiffBase main` 的 38 个阶段全部通过，其中真实 native corpus 约运行 370 秒；CLI、baseline、candidate、dev-command、EAGAIN、网络恢复、timeline、轨道字幕、颜色/display 和 Native x64 build 均通过。完整 App Debug x64 也已生成 `NoiraPlayer.App.dll`。
 
+基线边界：最新正式统一 baseline 仍是 `playback-quality-v0.18`，包含 25 份真实报告，结果为 19 pass、4 fail、1 unsupported、1 error。当前 v0.19 门禁已真实生成 17 个本地 native 正式 case，并完成一条严格 1:1 的 App-hosted timeline 复核，但尚未在无并行播放负载的条件下重新采集外部/私有 8 case。因此这些 v0.19 证据可验证执行契约和功能语义，不能与 v0.18 混比，也不能冒充新的统一性能 baseline。当前分支已包含 `main`、HEVC 双 `EAGAIN` 修复和暂停恢复 I/O 修复；三者均为当前 HEAD 的祖先，相应确定性回归已进入 38 阶段门禁。
+
 ## 2026-07-15 更新：接受 video processor 资源复用候选，并补上三处会造成假绿或集成漏检的缺口
 
 在 `734511b` 的 v0.16 baseline 上，仅复用 `ID3D11VideoProcessorEnumerator` 与 `ID3D11VideoProcessor`，cache key 包含输入/输出尺寸、DXGI 格式、frame format 和 usage；device、swapchain 或 key 变化会失效。input/output view、back buffer、中间纹理、颜色映射、format conversion validation、clear、blit、post-process 与 Present 仍逐帧执行。真实 NV12 offscreen 测试覆盖首次 miss、同源 hit、swapchain 重建失效和再次 miss。
