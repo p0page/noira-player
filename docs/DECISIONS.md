@@ -1,5 +1,17 @@
 ﻿# 技术决策
 
+## 2026-07-15：接受受限 video processor 缓存，但只声明 CPU 提交阶段改善
+
+决策：接受 `78fda3b` 的单变量候选。`DxDeviceResources` 只缓存由输入/输出尺寸、DXGI 格式、frame format 和 usage 标识的 `ID3D11VideoProcessorEnumerator` 与 `ID3D11VideoProcessor`；device、swapchain 重建或 key 变化必须失效。input/output view、back buffer、中间纹理、颜色映射、format conversion validation、rect/color state、clear、blit、post-process 和 Present 不得跨帧复用或跳过。只有 enumerator 与 processor 都创建成功后才能提交 cache，失败继续走原有诊断和回退路径。
+
+证据边界：同一 exact manifest 的 15 个 baseline/candidate 配对全部保持源哈希与颜色预期一致，五类 case 的 setup P95 均下降且没有新增 color pipeline failure。该证据足以接受 CPU 侧 processor setup 资源复用，不足以证明 GPU completion、frame pacing 总体、Xbox HDR 输出或面板颜色改善。通用 comparator 当前会被 broad corpus 环境问题阻断，且尚未消费 v0.16 phase delta；不得通过放宽 transport blocker 或复用总 render 指标来补出 accept。下一步应增加独立的 phase diagnostic comparison，保持 broad corpus 发布门禁不变。
+
+## 2026-07-15：native 回归与 WinRT 投影必须证明执行和新鲜度
+
+决策：native 回归命令不得以临时目录不存在作为编译/执行前提；每次门禁都必须真实重编译并运行测试可执行文件。需要 UWP runtime 的 FFmpeg 测试使用独立 runner 显式准备依赖，不能依赖开发机偶然存在的 DLL。成功 fixture 若属于当前评测版本，必须携带完整必填证据；unsupported/error fixture 不得由 synthetic evidence helper 修饰成成功。
+
+构建决策：`NoiraPlayer.Native` 的 `OutDir` 固定为项目目录下按 platform/configuration 隔离的稳定路径。原因是 C++/WinRT 增量 merge 在 standalone 与 solution build 共用 `IntDir`、切换 `OutDir` 时可能跳过 WinMD copy，使 App 读取旧 metadata。source contract 锁定该路径，完整 App 编译是所有 IDL/WinRT bridge 变更的必需集成门禁，不能由 app-free native build 替代。
+
 ## 2026-07-14：渲染资源复用只能由 v0.16 阶段证据触发
 
 决策：evaluation version 升级为 `playback-quality-v0.16`。成功渲染路径必须独立报告 direct copy、video processor、BGRA 与 post-process 计数；video processor 必须报告 setup、view/target、clear、blit、post-process 的总样本数和 P50/P95/P99/Max。阶段区间不得重叠，失败的 processor 尝试不得冒充成功路径，parser 必须拒绝缺字段、非法数值、histogram 顺序错误以及路径/阶段计数矛盾。`SampleCount` 表示总观测次数；固定 512 项只用于有界保存百分位样本，两者不得混用。

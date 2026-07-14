@@ -2,6 +2,18 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-15 更新：接受 video processor 资源复用候选，并补上三处会造成假绿或集成漏检的缺口
+
+在 `734511b` 的 v0.16 baseline 上，仅复用 `ID3D11VideoProcessorEnumerator` 与 `ID3D11VideoProcessor`，cache key 包含输入/输出尺寸、DXGI 格式、frame format 和 usage；device、swapchain 或 key 变化会失效。input/output view、back buffer、中间纹理、颜色映射、format conversion validation、clear、blit、post-process 与 Present 仍逐帧执行。真实 NV12 offscreen 测试覆盖首次 miss、同源 hit、swapchain 重建失效和再次 miss。
+
+同一 exact 五 case manifest 已完成 baseline 三轮和 candidate 三轮，共 15 个同源配对，源哈希和颜色预期全部一致，candidate 没有新增 color pipeline failure。video processor setup P95 从公开 SDR 的 `12.78-12.99ms` 降至 `0.012-0.014ms`，公开 HDR10 强制 SDR 从 `14.89-15.41ms` 降至 `0.012-0.024ms`，本地 SDR60 从 `0.228-0.232ms` 降至 `0.014ms`，本地 HDR10 60 从 `12.39-15.17ms` 降至 `0.012-0.013ms`，私有 DV8 HDR10 fallback 从 `0.311-0.339ms` 降至 `0.011-0.018ms`。首帧 cache miss 仍保留在 Max 中；P95 的下降来自后续真实 hit，不是删除样本或修改阈值。候选因此在 video processor CPU 提交阶段被接受，但不据此声称 GPU、Xbox、HDMI 或整机播放体验等价改善。
+
+本轮还修复了三项评测/构建基础设施缺陷。第一，若 native 临时目录已存在，旧 `if not exist ... && cl ...` 命令会跳过编译和执行却返回成功；现在命令无条件编译运行，FFmpeg seek replay 使用独立脚本准备 UWP runtime，D3D11 shared bridge 也补齐真实编译依赖。第二，CLI smoke 的 synthetic success fixture 漏了 v0.16 阶段字段，现只对真实声明播放成功的 fixture 生成自洽阶段证据，unsupported/error 不会被补成 pass。第三，native standalone 与 solution build 曾共享 C++/WinRT 中间目录却使用不同 `OutDir`，导致 App 消费旧 WinMD；native 输出目录现固定且有 source contract，完整 App 已从陈旧投影状态重新生成 IDL/WinMD/CsWinRT projection 并成功编译。
+
+最终 `run-playback-core-checks.ps1 -AppDiffBase main` 在提交后的源码上以 `exit 0` 完成：`675/675` 定向 Core 测试、真实 native corpus、30 秒暂停恢复、demux read error recovery、EAGAIN、seek/timeline、音轨字幕、显示刷新、HTTP input、seek replay cache、DX offscreen 与 Native Debug x64 build 全部通过；`Build-Noira.ps1 -Target Build -Configuration Debug -Platform x64` 也生成了完整 `NoiraPlayer.App.dll`。通用 candidate comparator 仍因公开网络环境 blocker 阻止全语料结论，而且当前尚未直接比较 v0.16 phase metrics；本轮保留该限制，没有放宽环境规则来制造 accept。下一步应把渲染阶段配对比较做成正式 diagnostic comparator，同时继续让 broad corpus gate 保持独立且严格。
+
+当前分支已包含 `main` 的 `d58104c`，`docs/DESIGN.md` 的 signal/play accent 为柔和紫 `#8B7CF6`；本轮播放 Core 改动没有覆盖该 UI 设计。
+
 ## 2026-07-14 更新：v0.16 渲染阶段证据完成，默认 5ms 基线支持受限资源复用候选
 
 评测契约升级为 `playback-quality-v0.16`。每个成功视频渲染现在记录 direct copy、D3D11 video processor、BGRA fallback 与 shader post-process 路径计数，并把 video processor 拆为 setup、input/output view 与目标资源、clear、blit、post-process 五段非重叠 CPU API 提交耗时。29 个新增字段已贯通 native snapshot、WinRT、App capture、Core report、模型信号目录、native helper 和 strict parser；缺字段、负数、非法 histogram 顺序、阶段计数与路径计数矛盾都必须失败。该证据只描述 CPU 侧 API 提交，不冒充 GPU 完成时间或 Xbox/HDMI 观测。
