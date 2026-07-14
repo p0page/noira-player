@@ -67,6 +67,47 @@ function Set-SmokeNativeExecutionEvidence {
         $payload.timing | Add-Member -NotePropertyName decodedVideoFrames -NotePropertyValue $decodedFrames
     }
 
+    if ($PlaybackSampleObserved -and $null -ne $payload.timing -and
+        $null -eq $payload.timing.PSObject.Properties['videoRenderVideoProcessorFrameCount']) {
+        $renderedFrames = [Math]::Max(1, [int64]$payload.timing.renderedVideoFrames)
+        $phaseEvidence = [ordered]@{
+            videoRenderDirectCopyFrameCount = [uint64]0
+            videoRenderVideoProcessorFrameCount = [uint64]$renderedFrames
+            videoRenderBgraFrameCount = [uint64]0
+            videoRenderPostProcessFrameCount = [uint64]0
+            videoProcessorSetupCpuSampleCount = [uint64]$renderedFrames
+            videoProcessorSetupCpuDurationMsP50 = 0.10
+            videoProcessorSetupCpuDurationMsP95 = 0.20
+            videoProcessorSetupCpuDurationMsP99 = 0.30
+            videoProcessorSetupCpuDurationMsMax = 0.40
+            videoProcessorViewTargetCpuSampleCount = [uint64]$renderedFrames
+            videoProcessorViewTargetCpuDurationMsP50 = 0.05
+            videoProcessorViewTargetCpuDurationMsP95 = 0.10
+            videoProcessorViewTargetCpuDurationMsP99 = 0.15
+            videoProcessorViewTargetCpuDurationMsMax = 0.20
+            videoProcessorClearCpuSampleCount = [uint64]$renderedFrames
+            videoProcessorClearCpuDurationMsP50 = 0.01
+            videoProcessorClearCpuDurationMsP95 = 0.02
+            videoProcessorClearCpuDurationMsP99 = 0.03
+            videoProcessorClearCpuDurationMsMax = 0.04
+            videoProcessorBltCpuSampleCount = [uint64]$renderedFrames
+            videoProcessorBltCpuDurationMsP50 = 0.01
+            videoProcessorBltCpuDurationMsP95 = 0.02
+            videoProcessorBltCpuDurationMsP99 = 0.03
+            videoProcessorBltCpuDurationMsMax = 0.04
+            videoProcessorPostProcessCpuSampleCount = [uint64]0
+            videoProcessorPostProcessCpuDurationMsP50 = 0.0
+            videoProcessorPostProcessCpuDurationMsP95 = 0.0
+            videoProcessorPostProcessCpuDurationMsP99 = 0.0
+            videoProcessorPostProcessCpuDurationMsMax = 0.0
+        }
+        foreach ($entry in $phaseEvidence.GetEnumerator()) {
+            $payload.timing | Add-Member `
+                -NotePropertyName $entry.Key `
+                -NotePropertyValue $entry.Value
+        }
+    }
+
     if ($PlaybackSampleObserved) {
         $transportComponents = @(
             'ffmpeg.open-input',
