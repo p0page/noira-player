@@ -51,4 +51,3 @@
 3. 候选必须无新增 error、unsupported、timeline、track、subtitle 或 color regression。
 4. 目标 case 的 setup P95 和 video render P95 必须在重复运行中稳定下降；只多推进一帧或单次总分改善不够。
 5. 采纳后运行完整 App build 和代表性 App-hosted 播放；没有策略候选被采纳时不做无意义的 App 实播。
-

@@ -89,4 +89,3 @@
 2. 若候选被采纳，完整编译 Modern App Debug x64，并运行代表性 App-hosted SDR/HDR fallback case。
 3. 更新 `docs/STATUS.md` 与 `docs/DECISIONS.md`，明确 accepted/rejected、软件证据边界和剩余风险。
 4. 提交最终结论；不把 ignored 私有凭据、manifest 或报告加入 Git。
-

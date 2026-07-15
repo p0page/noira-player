@@ -97,4 +97,3 @@
 - [ ] 用私有 Emby 的“一战再战”“哈姆奈特”运行代表 case，凭据只从 ignored runtime source map/环境变量读取。
 - [ ] 运行完整 `run-playback-core-checks.ps1` 与 `Build-NoiraModernUwp.ps1 -Target Build`。
 - [ ] 在中文 STATUS/DECISIONS 记录证据和 Kodi 对照；接受则提交 Core/native 改动，拒绝则撤回行为代码但保留评测与报告结论。
-
