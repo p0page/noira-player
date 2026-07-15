@@ -143,6 +143,9 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         Assert.Contains("RunSubtitleSwitchTransaction(", switchSource, StringComparison.Ordinal);
         Assert.Contains("SubtitleSwitchDisposition::Disabled", switchSource, StringComparison.Ordinal);
         Assert.Contains("m_subtitleDecoder.SelectedStreamIndex()", switchSource, StringComparison.Ordinal);
+        Assert.Contains("operations.ShouldRebasePlayback = [&useSwitchPacketCache]", switchSource, StringComparison.Ordinal);
+        Assert.Contains("return !useSwitchPacketCache;", switchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("return !m_switchPacketCacheEnabled;", switchSource, StringComparison.Ordinal);
         Assert.DoesNotContain("m_paused =", switchSource, StringComparison.Ordinal);
         Assert.DoesNotContain("m_audioRenderer.Start()", switchSource, StringComparison.Ordinal);
         Assert.DoesNotContain("m_audioRenderer.Stop()", switchSource, StringComparison.Ordinal);
@@ -150,8 +153,9 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         Assert.DoesNotContain("m_audioRenderer.Resume()", switchSource, StringComparison.Ordinal);
 
         Assert.Contains("options.Scenario == L\"subtitle-switch\"", helperSource, StringComparison.Ordinal);
-        Assert.Contains("runSubtitleSwitch(subtitleStreamIndexes[0], true)", helperSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("runSubtitleSwitch(subtitleStreamIndexes[1]", helperSource, StringComparison.Ordinal);
+        Assert.Contains("if (!track.IsForced && !subtitleSwitchStreamIndex.has_value())", helperSource, StringComparison.Ordinal);
+        Assert.Contains("subtitleSwitchStreamIndex = subtitleStreamIndexes[0];", helperSource, StringComparison.Ordinal);
+        Assert.Contains("runSubtitleSwitch(subtitleSwitchStreamIndex.value(), true)", helperSource, StringComparison.Ordinal);
         Assert.Contains("InteractionEvidenceTimeout", helperSource, StringComparison.Ordinal);
         Assert.DoesNotContain("options.Scenario == L\"interactions\"", helperSource, StringComparison.Ordinal);
         Assert.DoesNotContain("subtitleOff.Attempted = true;", helperSource, StringComparison.Ordinal);

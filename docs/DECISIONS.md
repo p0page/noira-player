@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-15：字幕切换是否重定位由本次 cache hit 决定
+
+决策：字幕切换只能在目标流本次实际命中 switch packet cache 时跳过 seek/rebase。全局启用缓存只表示允许尝试缓存，不能代表目标流已有可重放包；cache miss、缓存不足或目标流不在缓存中时必须按当前逻辑时间重定位并重新预卷。实现判断绑定到本次操作的 `useSwitchPacketCache`，不得读取全局 `m_switchPacketCacheEnabled` 代替命中结果。
+
+样本与 runner 决策：字幕切换 helper 优先选择首个非 forced 字幕，所有字幕均为 forced 时才回退第一条。stable 字幕 case 除了存在字幕轨，还必须具有已知 cue 时间锚点或能覆盖 cue 的确定性窗口；“发现轨道”不能冒充“字幕解码并显示”。音轨切换同理必须绑定至少两条音轨的源。生成器、runner 和 strict report 必须保留实际目标轨、cache hit/miss、seek/rebase、恢复及 cue 增量证据。
+
+归因边界：cache miss 后真实执行 seek 只能证明重定位缺陷已修复，不能单独证明远端字幕显示成功。固定窗口无 cue 且独立 probe 显示 cue 稀疏时属于样本窗口证据不足；严重 transport wait 和视频饥饿属于环境/外部源证据。两者都不得改成 pass，也不得在没有确定性复现时触发字幕渲染策略调整。
+
+验证规则：Core 缺陷必须由源码/确定性回归锁定，并通过完整 native corpus；私有远端 case 用来补充真实协议和网络证据，但单轮性能抖动不替代同 manifest 重复。关键 Core/native 改动最终还必须通过完整 App 构建。
+
 ## 2026-07-15：timeline 时长与 seek 恢复必须来自播放器实际状态
 
 决策：UI timeline 的时长按 native demux 观测值、当前所选媒体源、item metadata 的顺序解析。native getter 只能通过持有 graph 生命周期锁的非抛出接口读取；媒体未打开或已经停止时返回 0，不得直接访问已关闭的 FFmpeg stream。切换媒体源后必须重新解析时长，direct URI 不得用当前 position 扩张 slider max 来冒充真实 duration。

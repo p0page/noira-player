@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-15 更新：v0.21 重复基线发现并修复字幕切换 cache miss 重定位缺陷
+
+固定私有 manifest 在提交 `8a67e6b` 上完成两轮同参数重放。每轮 Core manifest 均实际选择并尝试 16/16 个 case，0 helper failure、0 unresolved、0 missing report；与 17 个确定性 native case 合并后均为 33/33 strict valid。音轨切换现在由生成器绑定到至少含两条音轨的实际媒体源，并真实完成目标轨选择和恢复；第二轮整体质量 fail 来自远端传输等待导致播放推进不足，不是切轨操作失败。两轮中若干外部源性能结果随 transport wait 明显波动，因此只作为环境分布保留，不驱动 Core 策略修改；本地网络重连、30 秒长暂停和 demux read error 恢复连续通过。
+
+字幕复核区分出评测器与播放器两类问题。headless helper 原先总选第一条字幕，私有源的第一条恰为 forced track；现在优先选择首个非 forced 字幕，没有时才回退第一条。进一步实播发现真实 Core 缺陷：全局启用 switch packet cache、但目标字幕流本次 cache miss 时，`ShouldRebasePlayback` 仍因全局开关跳过 seek/rebase。判断现改为使用本次操作的 `useSwitchPacketCache`；cache hit 才跳过重定位，cache miss 必须按原时间轴重定位。源码契约先红后绿，完整 native smoke 中的确定性字幕切换、cue 观测及全部恢复场景均通过。
+
+修复后的私有字幕 case 已观测到 `packetCacheEnabled=true`、`packetCacheHit=false` 且 seek/rebase 从此前的 0 变为真实执行。但该远端源在复核时启动约 12-26 秒、持续视频饥饿，固定观察窗口内没有字幕 cue；独立 probe 同时证明其字幕 cue 分布稀疏。因此当前不能宣称私有字幕显示已通过，也不能把无 cue 直接归因于渲染器。后续私有 stable 字幕样本必须声明可复现的 cue 时间锚点或已知 cue 窗口，再用同一 manifest 重放。
+
+验证：`run-playback-core-checks.ps1 -AppDiffBase main` 的 38 个阶段全部通过，含 728/728 Core 测试、真实 native corpus、字幕/音轨切换、网络与长暂停恢复、demux I/O 与 EAGAIN 恢复、timeline、帧节奏、颜色/DXGI、DX offscreen 和 Native Debug x64 build。`Build-Noira.ps1 -Target Build -Configuration Debug -Platform x64` 也重新链接 Native 并生成完整 `NoiraPlayer.App.dll`；没有调整评测阈值，也没有把环境或样本证据不足改写成 pass。
+
 ## 2026-07-15 更新：真实 App 时长与 seek 恢复证据闭环
 
 进度条和拖动问题的时长来源已修正。播放器现在优先使用 native demux 实际观测到的逻辑时长，其次使用当前所选媒体源的 `RunTimeTicks`，最后才回退到 item metadata；切换媒体源和播放进度 tick 都会刷新该值。direct URI 不再因服务端时长为零而把 slider 最大值缩成当前位置。native duration getter 已移入 `PlaybackGraph` 生命周期锁内，媒体关闭后返回 0；首轮完整 App 复核发现 Stop 后的进度 timer 曾访问已关闭 FFmpeg stream 并触发未捕获异常，该问题已由停止态回归契约锁定。

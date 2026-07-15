@@ -395,6 +395,7 @@ int wmain(int argc, wchar_t** argv)
 
         std::vector<int32_t> audioStreamIndexes;
         std::vector<int32_t> subtitleStreamIndexes;
+        std::optional<int32_t> subtitleSwitchStreamIndex;
         auto selectedAudioStreamIndex = graph.SelectedAudioStreamIndex();
         for (auto const& track : tracks)
         {
@@ -405,7 +406,15 @@ int wmain(int argc, wchar_t** argv)
             else if (track.Kind == "Subtitle")
             {
                 subtitleStreamIndexes.push_back(track.StreamIndex);
+                if (!track.IsForced && !subtitleSwitchStreamIndex.has_value())
+                {
+                    subtitleSwitchStreamIndex = track.StreamIndex;
+                }
             }
+        }
+        if (!subtitleSwitchStreamIndex.has_value() && !subtitleStreamIndexes.empty())
+        {
+            subtitleSwitchStreamIndex = subtitleStreamIndexes[0];
         }
 
         AudioSwitchOutcome audioSwitch;
@@ -646,9 +655,9 @@ int wmain(int argc, wchar_t** argv)
             return outcome;
         };
 
-        if (options.Scenario == L"subtitle-switch" && !subtitleStreamIndexes.empty())
+        if (options.Scenario == L"subtitle-switch" && subtitleSwitchStreamIndex.has_value())
         {
-            subtitleSwitch1 = runSubtitleSwitch(subtitleStreamIndexes[0], true);
+            subtitleSwitch1 = runSubtitleSwitch(subtitleSwitchStreamIndex.value(), true);
         }
 
         if (options.Scenario == L"audio-switch" || options.Scenario == L"subtitle-switch")

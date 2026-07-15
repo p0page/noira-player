@@ -568,9 +568,9 @@ namespace winrt::NoiraPlayer::Native::implementation
         {
             return m_subtitleDecoder.SelectedStreamIndex();
         };
-        operations.ShouldRebasePlayback = [this]
+        operations.ShouldRebasePlayback = [&useSwitchPacketCache]
         {
-            return !m_switchPacketCacheEnabled;
+            return !useSwitchPacketCache;
         };
         operations.SeekVideo = [this, resumePositionTicks, &timing, &useSwitchPacketCache]
         {
