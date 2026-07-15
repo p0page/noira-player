@@ -804,7 +804,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         return m_lastSeekTimingSnapshot;
     }
 
-    void PlaybackGraph::StartVideoDecodeWorker()
+    void PlaybackGraph::StartVideoDecodeWorker(bool waitUntilReady)
     {
         if (!m_videoDecoder.UsesIndependentDecodeDevice())
         {
@@ -820,6 +820,11 @@ namespace winrt::NoiraPlayer::Native::implementation
         }
 
         m_videoDecodeWorker->Start();
+        if (!waitUntilReady)
+        {
+            return;
+        }
+
         auto const readyDeadline = std::chrono::steady_clock::now() + 5s;
         while (std::chrono::steady_clock::now() < readyDeadline)
         {
@@ -840,7 +845,7 @@ namespace winrt::NoiraPlayer::Native::implementation
     {
         try
         {
-            StartVideoDecodeWorker();
+            StartVideoDecodeWorker(true);
         }
         catch (...)
         {
@@ -874,7 +879,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         try
         {
-            StartVideoDecodeWorker();
+            StartVideoDecodeWorker(false);
         }
         catch (...)
         {

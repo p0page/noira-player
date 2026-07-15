@@ -131,7 +131,7 @@ namespace winrt::NoiraPlayer::Native::implementation
     private:
         void StartRenderLoop();
         void StopRenderLoop() noexcept;
-        void StartVideoDecodeWorker();
+        void StartVideoDecodeWorker(bool waitUntilReady);
         void StartVideoDecodeWorkerOrFallback() noexcept;
         bool StopVideoDecodeWorkerForMutation() noexcept;
         void RestartVideoDecodeWorkerAfterMutation(bool restart) noexcept;

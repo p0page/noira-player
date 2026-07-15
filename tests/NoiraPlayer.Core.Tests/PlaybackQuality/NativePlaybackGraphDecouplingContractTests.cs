@@ -502,6 +502,25 @@ public sealed class NativePlaybackGraphDecouplingContractTests
     }
 
     [Fact]
+    public void Native_Mutation_Restart_Does_Not_Block_Until_First_Decoded_Frame()
+    {
+        var root = FindRepositoryRoot();
+        var graphSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "NoiraPlayer.Native",
+            "Media",
+            "PlaybackGraph.cpp"));
+
+        var initialStart = ReadMethodBody(graphSource, "void PlaybackGraph::StartVideoDecodeWorkerOrFallback");
+        var mutationRestart = ReadMethodBody(graphSource, "void PlaybackGraph::RestartVideoDecodeWorkerAfterMutation");
+
+        Assert.Contains("StartVideoDecodeWorker(true);", initialStart, StringComparison.Ordinal);
+        Assert.Contains("StartVideoDecodeWorker(false);", mutationRestart, StringComparison.Ordinal);
+        Assert.DoesNotContain("readyDeadline", mutationRestart, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Native_Headless_Opened_Source_Hash_Uses_Observed_Media_Signature()
     {
         var root = FindRepositoryRoot();
