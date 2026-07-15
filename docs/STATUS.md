@@ -1474,3 +1474,11 @@ commit `1c965fa` 上的最终 v0.18 基线已完成，ignored 路径为 `docs/qa
 结果为 `19 pass / 4 fail / 1 unsupported / 1 error`。DV5 继续诚实报告 unsupported，missing-file case 保留预期 error；三个公开 fail 属于媒体覆盖/吞吐不足的 environment issue。另一个公开 HDR10 case 启动 `5933.96ms` 超过 5 秒门限，实测启动 transport wait 为 `2546.75ms`、占比 `42.92%`，足以解释 `933.96ms` 超时量，因此 v0.18 正确输出 `transport-wait-dominant`，模型建议先核查网络延迟而非修改 Core open/demux。私有 SDR 与 DV8/HDR10 fallback case 均 pass，分别再次自然观察到视频解码 EAGAIN `2/2/2/0` 与 `1/1/1/0`，且 native 媒体元数据为 observed。该基线建立了可信现状，没有产生新的播放策略改善声明。
 
 基于该基线继续对照 FFmpeg 8.1.2、Kodi、VLC 和 mpv 后，曾独立验证官方 `async:` 后台预读包装。公开与私有 A/B 均没有稳定缩短完整 open + stream-info；私有 Matroska 的逻辑工作量完全不变，并出现一次约 2 倍慢的 async 离群运行，公开 async 还出现一次 premature EOF 后重连。该候选未修改产品代码、未进入正式 baseline/candidate，临时程序和二进制已清理。下一覆盖缺口是让私有代表片源执行真实 resume/seek/timeline，而不是继续针对网络启动波动调参。
+
+# 2026-07-15 更新：manifest runner v0.3 吸收短时源解析抖动但不放宽证据门禁
+
+在 commit `4b08df9` 的第二轮 36-case 正式基线中，19 个外部 case 只有 18 个进入 native：同一私有 HDR 源的前一个 case 已成功，紧接着的 force-SDR case 在 3 次短退避内均得到 `emby-request-failed`，后续 case 又恢复。runner 正确生成 orchestration error，并因 `native-playback` 证据不足使 strict validation 为 false；该轮保留为无效诊断 artifact，不能与有效基线配对，也不能归因给播放器 Core。
+
+`native-manifest-runner-v0.3` 现在只对 `emby-request-failed`、测试用 `transient-request-failed` 和无细分错误的 `resolver-failed` 做最多 6 次指数退避，等待依次为 250、500、1000、2000、4000ms；`media-source-not-found` 等永久错误立即停止。summary 继续记录真实 `sourceResolutionAttemptCount`，恢复后才调用 native harness；预算耗尽仍写 orchestration error、保持 unresolved，并使整轮非零退出和 strict baseline 无效。该策略用于容忍正常短时服务抖动，不会把缺失源或未执行 case 冒充播放证据。
+
+TDD 回归覆盖“前 3 次解析失败、第 4 次恢复”和永久错误首轮停止；manifest runner 测试通过，Core 全量 `1158/1158` 通过。baseline 合同正向路径已用 runner v0.3 生成并严格验证有效；该 PowerShell 测试文件的既有嵌套负例在当前 Codex PTY 中仍返回未定义退出码，因此不记作完整脚本全绿。播放器行为、报告 schema 和评价规则均未改变，下一步在提交后的干净 commit 上重新执行同 manifest 重复基线。

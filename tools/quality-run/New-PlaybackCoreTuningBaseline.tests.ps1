@@ -191,12 +191,12 @@ exit 1
         $validation.matchedCaseCount -ne 1 -or
         $runnerSummary.selectedCaseCount -ne 1 -or
         $runnerSummary.reportCount -ne 1 -or
-        $runnerSummary.runnerVersion -ne 'native-manifest-runner-v0.2' -or
+        $runnerSummary.runnerVersion -ne 'native-manifest-runner-v0.3' -or
         $runnerSummary.unattributedReportCount -ne 0 -or
         $runnerSummary.invalidReportCount -ne 0 -or
         $runnerSummary.missingReportCount -ne 0 -or
         $runnerSummary.seekPacketCacheEnabled -ne $false -or
-        $summary.coreExecution.runner -ne 'native-manifest-runner-v0.2' -or
+        $summary.coreExecution.runner -ne 'native-manifest-runner-v0.3' -or
         $summary.coreExecution.seekPacketCacheEnabled -ne $false) {
         throw 'Expected baseline to contain one strict-valid native manifest-runner report.'
     }

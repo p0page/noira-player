@@ -101,7 +101,10 @@ function Resolve-PlaybackQualityEmbySource {
     )
     $prefix = 'resolved-source-base64:'
     $lastErrorCode = 'resolver-failed'
-    for ($attempt = 1; $attempt -le 3; $attempt++) {
+    $attemptCount = 0
+    $maxAttempts = 6
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+        $attemptCount = $attempt
         $previousErrorActionPreference = $ErrorActionPreference
         $ErrorActionPreference = 'Continue'
         try {
@@ -156,16 +159,25 @@ function Resolve-PlaybackQualityEmbySource {
             }
         }
 
-        if ($attempt -lt 3) {
-            Start-Sleep -Milliseconds (250 * $attempt)
+        $isRetriable = $lastErrorCode -in @(
+            'emby-request-failed',
+            'transient-request-failed',
+            'resolver-failed')
+        if (-not $isRetriable -or $attempt -ge $maxAttempts) {
+            break
         }
+
+        $backoffMilliseconds = [Math]::Min(
+            4000,
+            [int](250 * [Math]::Pow(2, $attempt - 1)))
+        Start-Sleep -Milliseconds $backoffMilliseconds
     }
 
     return [pscustomobject]@{
         Succeeded = $false
         StreamUrl = ''
         ErrorCode = $lastErrorCode
-        AttemptCount = 3
+        AttemptCount = $attemptCount
     }
 }
 

@@ -1538,3 +1538,9 @@ baseline 必须在 materialize 前检查 runner summary 的版本、缺失报告
 依据：使用当前 `HttpMediaInput + 32 KiB custom AVIO + 完整 avformat_find_stream_info` 做未进入仓库的 A/B。公开 HDR10 样本 plain 总打开约 `1.82-2.12s`、async 约 `1.83-1.86s`，无稳定收益且一轮 async 出现 premature EOF 后重连。私有 Matroska 样本 plain 为 `2.01-2.25s`，async 为 `2.19s` 和一次 `4.41s` 退化；两侧均读取 `2,669,471` bytes、70 次 outer read、2 次 data seek、约 `37.3GB` 逻辑 seek distance。async 没有减少 FFmpeg 的探测或大跨度 seek 工作，只增加后台预读与抖动风险。
 
 后续不以调大 AVIO buffer、跳过 stream-info 或默认 async 包装制造启动改善。Kodi、mpv 的稳定网络体验依赖更完整的缓存/预读体系；本项目在没有明确、可维护且同 manifest 重复获益的设计前，不自建复杂缓存。下一优先级转向私有源的 timeline/resume/seek 覆盖，以捕获用户已观察到的进度和拖动失效。
+
+# 2026-07-15: 瞬时源解析失败采用有界指数退避，永久错误立即失败
+
+决策：运行编排合同升级为 `native-manifest-runner-v0.3`。Emby 源解析只有在错误明确属于瞬时请求失败时才允许重试，最多 6 次，退避上限 4 秒；永久的凭据、媒体源缺失、URL 非法或 resolver 输出合同错误不得反复等待。恢复后的 case 必须重新生成本轮唯一 attempt id 并真实调用 native harness，summary 保留总解析尝试次数；重试预算耗尽仍是 unresolved orchestration error，不能满足 `native-playback` 证据要求。
+
+原因：正常机器和网络抖动是重复评测的观测分布，不应因不足 1 秒的密集重试让完整长基线频繁作废；但自动重试也不能删除首次异常、降低 stable 标准或把未执行播放算成 pass。该变化只增强运行编排的抗瞬时波动能力，不改变播放器 Core、report schema 或评价阈值。单轮恢复只能说明源最终可解析，性能和稳定性结论仍需同代码、同 manifest 的重复报告支持。

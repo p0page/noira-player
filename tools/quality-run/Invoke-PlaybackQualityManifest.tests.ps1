@@ -189,6 +189,25 @@ try {
       }
     },
     {
+      "caseId": "runner/emby-delayed-recovery",
+      "category": "challenge",
+      "severity": "high",
+      "stability": "variable",
+      "uri": "emby://items/delayed-item",
+      "itemId": "delayed-item",
+      "mediaSourceId": "delayed-source",
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
+      "purpose": [ "network-recovery" ],
+      "expected": {
+        "codec": "h264",
+        "width": 320,
+        "height": 180,
+        "frameRate": 30,
+        "hdrKind": "Sdr",
+        "isDirectPlayable": true
+      }
+    },
+    {
       "caseId": "runner/quarantine-omitted",
       "category": "quarantine",
       "severity": "low",
@@ -282,14 +301,15 @@ $itemId = if ($itemIdIndex -ge 0 -and $itemIdIndex + 1 -lt $Arguments.Count) {
     ''
 }
 $statePath = $env:NOIRAPLAYER_MANIFEST_RESOLVER_TEST_STATE
-if ($itemId -eq 'private-item') {
+if ($itemId -in @('private-item', 'delayed-item')) {
     $priorAttempts = if (Test-Path -LiteralPath $statePath) {
-        @(Get-Content -LiteralPath $statePath).Count
+        @(Get-Content -LiteralPath $statePath | Where-Object { $_ -eq $itemId }).Count
     } else {
         0
     }
     Add-Content -LiteralPath $statePath -Value $itemId
-    if ($priorAttempts -eq 0) {
+    $requiredFailures = if ($itemId -eq 'delayed-item') { 3 } else { 1 }
+    if ($priorAttempts -lt $requiredFailures) {
         Write-Error 'resolver-error:transient-request-failed'
         exit 2
     }
@@ -343,14 +363,15 @@ exit 0
     finally {
         $sha256.Dispose()
     }
-    if ($invocations.Count -ne 7 -or
+    if ($invocations.Count -ne 8 -or
         $invocations[1] -ne ('runner/second-runs|pause=|start=20000000|seek=900000000|scenario=timeline|stream=http://127.0.0.1:54321/runtime-media.mp4|locator=' + $secondLocatorHash + '|seekCache=true|reference=runner/second-runs,challenge,medium,variable,Hdr10') -or
         $invocations[0] -notmatch '^runner/first-fails\|pause=1\|start=0\|seek=\|scenario=pause-resume\|.*\|seekCache=true\|reference=runner/first-fails,stable,high,stable,Sdr$' -or
         $invocations[2] -notmatch '^runner/emby-resolved\|pause=\|start=0\|seek=\|scenario=playback\|.*\|seekCache=true\|reference=runner/emby-resolved,stable,high,stable,Sdr$' -or
         $invocations[3] -notmatch '^runner/audio-switch\|pause=\|start=0\|seek=\|scenario=audio-switch\|.*\|seekCache=true\|reference=runner/audio-switch,stable,high,stable,Sdr$' -or
         $invocations[4] -notmatch '^runner/subtitle-switch\|pause=\|start=600000000\|seek=\|scenario=subtitle-switch\|.*\|seekCache=true\|reference=runner/subtitle-switch,stable,high,stable,Sdr$' -or
         $invocations[5] -notmatch '^runner/stale-pass-must-not-survive\|pause=\|start=0\|seek=\|scenario=playback\|.*\|seekCache=true\|reference=runner/stale-pass-must-not-survive,stable,critical,stable,Sdr$' -or
-        $invocations[6] -notmatch '^runner/mismatched-attempt-must-not-pass\|pause=\|start=0\|seek=\|scenario=playback\|.*\|seekCache=true\|reference=runner/mismatched-attempt-must-not-pass,stable,critical,stable,Sdr$') {
+        $invocations[6] -notmatch '^runner/mismatched-attempt-must-not-pass\|pause=\|start=0\|seek=\|scenario=playback\|.*\|seekCache=true\|reference=runner/mismatched-attempt-must-not-pass,stable,critical,stable,Sdr$' -or
+        $invocations[7] -notmatch '^runner/emby-delayed-recovery\|pause=\|start=0\|seek=\|scenario=playback\|.*\|seekCache=true\|reference=runner/emby-delayed-recovery,challenge,high,variable,Sdr$') {
         throw 'Manifest runner must invoke each selected stable/challenge case exactly once and preserve order.'
     }
 
@@ -369,7 +390,8 @@ exit 0
         'runner/subtitle-switch',
         'runner/mismatched-attempt-must-not-pass',
         'runner/emby-unresolved',
-        'runner/runtime-source-required')) {
+        'runner/runtime-source-required',
+        'runner/emby-delayed-recovery')) {
         $reportPath = Join-Path $reportsDir ($caseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json')
         if (-not (Test-Path -LiteralPath $reportPath)) {
             throw ('Manifest runner did not preserve a per-case report for ' + $caseId)
@@ -405,17 +427,17 @@ exit 0
     }
 
     $summary = Get-Content -LiteralPath $summaryPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    if ($summary.runnerVersion -ne 'native-manifest-runner-v0.2' -or
-        $summary.selectedCaseCount -ne 9 -or
-        $summary.attemptedCaseCount -ne 7 -or
-        $summary.reportCount -ne 8 -or
+    if ($summary.runnerVersion -ne 'native-manifest-runner-v0.3' -or
+        $summary.selectedCaseCount -ne 10 -or
+        $summary.attemptedCaseCount -ne 8 -or
+        $summary.reportCount -ne 9 -or
         $summary.failedAttemptCount -ne 3 -or
-        $summary.passReportCount -ne 4 -or
+        $summary.passReportCount -ne 5 -or
         $summary.errorReportCount -ne 3 -or
         $summary.nonPassReportCount -ne 4 -or
         $summary.unknownReportCount -ne 1 -or
         $summary.unresolvedSourceCount -ne 2 -or
-        $summary.resolvedSourceCount -ne 1 -or
+        $summary.resolvedSourceCount -ne 2 -or
         $summary.unattributedReportCount -ne 1 -or
         $summary.missingReportCount -ne 1 -or
         $summary.seekPacketCacheEnabled -ne $true) {
@@ -424,10 +446,12 @@ exit 0
     }
     $resolvedAttempt = @($summary.attempts | Where-Object caseId -eq 'runner/emby-resolved')[0]
     $unresolvedAttempt = @($summary.attempts | Where-Object caseId -eq 'runner/emby-unresolved')[0]
+    $delayedRecoveryAttempt = @($summary.attempts | Where-Object caseId -eq 'runner/emby-delayed-recovery')[0]
     $secondAttempt = @($summary.attempts | Where-Object caseId -eq 'runner/second-runs')[0]
     $mismatchedAttempt = @($summary.attempts | Where-Object caseId -eq 'runner/mismatched-attempt-must-not-pass')[0]
     if ($resolvedAttempt.sourceResolutionAttemptCount -ne 2 -or
-        $unresolvedAttempt.sourceResolutionAttemptCount -ne 3) {
+        $unresolvedAttempt.sourceResolutionAttemptCount -ne 1 -or
+        $delayedRecoveryAttempt.sourceResolutionAttemptCount -ne 4) {
         throw 'Manifest runner must preserve bounded source-resolution retry evidence.'
     }
     if ($secondAttempt.runnerAttemptId -notmatch '^[0-9a-f]{32}$' -or
