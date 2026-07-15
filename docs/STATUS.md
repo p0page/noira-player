@@ -10,6 +10,8 @@
 
 私有 HDR 样本已通过独立 `ffprobe` 读取实际码流，而非依赖文件名或 manifest expected。当前代表源均为 BT.2020/PQ 的 Dolby Vision profile 8、HDR10 base layer，私有 expected 已在 ignored 本地 manifest 中修正为 DV8 HDR10 fallback，不进入仓库。修复后的首轮统一运行实际执行并生成 36/36 份 native report，严格 report-set 有效；其中质量结果仍诚实保留 fail、error 和 unsupported。该轮随后暴露 EOF helper 的隐藏断言，因此只作为评测器诊断证据，不作为最终正式 baseline；需在当前代码上完成至少两轮同 manifest 重复运行。
 
+`effa8d1` 后的首次完整重放又发现一项 validator 缺陷：私有 timeline helper 在源打开完成前达到 120 秒 attempt timeout，runner 正确生成了带 attemptId 的 `error/failed` 报告，但 validator 仍要求空 actual source metadata 匹配 expected，并要求尚未执行的 seek target 存在。现在 source metadata 只在 `execution.sourceOpened=true` 时比较；timeline target 对完成播放始终强制比较，对 error 则只在报告实际观测到 target 时比较。原始 36 份报告重放后为 `structureValid=true`、`executionValid=true`、`36/36 matched`、0 error；timeline timeout 仍保留为真实 error，没有改成 pass。该轮报告属于评测器诊断重放，正式 baseline 仍需绑定修复后的新 commit 重新执行。
+
 评测环境边界：明确的并行播放或人为高负载会使性能比较不可归因；日常 CPU、磁盘和网络抖动属于正常环境，不自动作废运行。性能结论必须依赖同一 commit、同一 manifest 的重复分布，并结合 transport wait、执行时长、媒体推进、帧节奏和跨 case 对照区分播放器缺陷、样本/网络问题与 flaky。单次异常不得直接驱动 Core 策略修改。
 
 ## 2026-07-15 更新：v0.20 将暂停恢复从日志文本升级为强制结构化证据

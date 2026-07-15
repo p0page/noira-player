@@ -261,7 +261,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     ReportRunId = report.RunId,
                     Status = "matched"
                 };
-                if (!IsErrorHandlingReport(referenceCase, report) &&
+                if (report.Execution?.SourceOpened == true &&
+                    !IsErrorHandlingReport(referenceCase, report) &&
                     !IsSkipReport(report))
                 {
                     ValidateSource(validation, status, referenceCase.Expected, report);
@@ -387,6 +388,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
             }
 
             if (requiredScenario == PlaybackQualityExecutionScenario.Timeline &&
+                (RequiresCompletedPlaybackSample(report.Result) ||
+                 report.Position.SeekTargetPositionTicks.HasValue) &&
                 report.Position.SeekTargetPositionTicks != referenceCase.SeekTargetPositionTicks)
             {
                 AddExecutionError(

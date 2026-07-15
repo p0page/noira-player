@@ -10,6 +10,8 @@
 
 重复与环境规则：普通机器和网络抖动是运行分布的一部分，不自动使 case 无效；明确并行播放、人工压力负载或无法关联到本次 attempt 的外部干扰才阻断性能比较。任何 Core 调优假设至少需要同 commit、同 manifest 的重复证据，并保留 transport、推进速度、frame pacing、A/V sync 和错误阶段，不能用单次异常或单次恢复制造结论。
 
+错误报告的 actual 契约：`error` 可以在 source open 或场景操作发生前终止，只要真实 attempt、最低 evidence level、runner/scenario、locator hash、执行状态和结构化 error 完整，就属于严格有效的失败证据。source metadata 仅在 `execution.sourceOpened=true` 时与 expected 比较；timeline 的完成播放必须提供并匹配 seek target，error 报告只有在实际记录 target 时才比较。不得为了满足 validator 而把 manifest expected 倒填成尚未观测到的 actual，也不得把 timeout/error 改写成 pass。
+
 ## 2026-07-15：暂停恢复必须提供可区分失败与缺证据的结构化 interaction
 
 决策：评测版本升级为 `playback-quality-v0.20`。所有 pause-resume case 必须在 `interaction` 中保存请求/实际暂停时长、恢复耗时、暂停前后 position、decoded/rendered 原始计数及 delta、`playbackFailed`。native-headless 与 App-hosted 必须调用同一 Core factory 生成这些字段；signal catalog、required-signal、evaluator、模型分析和序列化必须同步覆盖。生命周期 message 只用于人类诊断，不能代替结构化字段。

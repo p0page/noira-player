@@ -1818,6 +1818,55 @@ public sealed class PlaybackQualityReferenceManifestTests
     }
 
     [Fact]
+    public void ValidateReportSet_Accepts_Timeline_Timeout_Before_Source_Open_Without_Fabricated_Actuals()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("timeline/open-timeout", 1, "timeline");
+        referenceCase.ExecutionRequirement.Scenario = PlaybackQualityExecutionScenario.Timeline;
+        referenceCase.SeekTargetPositionTicks = 900_000_000;
+        manifest.Cases.Add(referenceCase);
+
+        var report = new PlaybackQualityReport
+        {
+            RunId = referenceCase.CaseId,
+            Result = PlaybackQualityReportResult.Error,
+            Error = new PlaybackQualityError
+            {
+                Code = "native-headless.helper-failed",
+                Message = "Native helper timed out before returning playback metrics.",
+                Operation = "native-headless-open",
+                ExceptionType = "native-helper-exit",
+                FailureClass = PlaybackQualityFailureClassification.InsufficientInstrumentation,
+                FailureArea = "evidence-collection",
+                IsTerminal = true,
+                IsRetriable = true
+            }
+        };
+        AddTestEnvironment(report);
+        report.Lifecycle.Events.Add(new PlaybackQualityLifecycleEvent
+        {
+            Operation = "native-headless-open",
+            Status = "error",
+            Message = report.Error.Message
+        });
+        AddNativeExecutionEvidence(
+            report,
+            referenceCase,
+            PlaybackQualityExecutionStatus.TimedOut,
+            sourceOpened: false,
+            decoderOpened: false,
+            playbackSampleObserved: false);
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(manifest, new[] { report });
+
+        Assert.True(validation.StructureValid);
+        Assert.True(validation.ExecutionValid);
+        Assert.True(validation.IsValid);
+        Assert.DoesNotContain(validation.Errors, error => error.Code.StartsWith("report.source.", StringComparison.Ordinal));
+        Assert.DoesNotContain(validation.Errors, error => error.Code == "report.position.seek-target.mismatch");
+    }
+
+    [Fact]
     public void ValidateReportSet_Rejects_Stable_Skip_Even_When_A_Runner_Claims_Native_Evidence()
     {
         var manifest = new PlaybackQualityReferenceManifest();
