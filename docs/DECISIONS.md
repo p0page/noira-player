@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-15：正式 baseline 的 manifest 必须等于实际执行集合
+
+决策：统一 baseline 最终只能合并筛选后的 executed Core manifest 与本轮真实 native manifest。完整语料或审计 manifest 可以保留 quarantine、未选择或当前环境不可执行的 case，但这些 case 不得进入本轮最终 manifest，也不得由 expected、probe 或缺失报告补位。最终 manifest、runner attempt 和 report 必须逐 case 一一对应。
+
+显式数值 `0` 是有效观测，不是字段缺失。required-signal presence 判断必须与质量判定分离：字幕 cue 为零可以形成真实 fail；只有 JSON 字段确实不存在时才属于 insufficient instrumentation。EOF helper 不得附加 manifest 未声明的最低帧数阈值，自然 EOF 和全部解码、呈现、丢帧计数应原样交给 evaluator。确定性的缺失文件 case 必须来自真实不可打开的本地源，不在私有 Emby manifest 中伪造不存在的 item。
+
+样本 expected 只能由独立媒体解析证据修正，不能依赖文件名。私有 locator、凭据和媒体详情继续只存于 ignored 本地 manifest；仓库仅保存生成规则与通用契约。
+
+重复与环境规则：普通机器和网络抖动是运行分布的一部分，不自动使 case 无效；明确并行播放、人工压力负载或无法关联到本次 attempt 的外部干扰才阻断性能比较。任何 Core 调优假设至少需要同 commit、同 manifest 的重复证据，并保留 transport、推进速度、frame pacing、A/V sync 和错误阶段，不能用单次异常或单次恢复制造结论。
+
 ## 2026-07-15：暂停恢复必须提供可区分失败与缺证据的结构化 interaction
 
 决策：评测版本升级为 `playback-quality-v0.20`。所有 pause-resume case 必须在 `interaction` 中保存请求/实际暂停时长、恢复耗时、暂停前后 position、decoded/rendered 原始计数及 delta、`playbackFailed`。native-headless 与 App-hosted 必须调用同一 Core factory 生成这些字段；signal catalog、required-signal、evaluator、模型分析和序列化必须同步覆盖。生命周期 message 只用于人类诊断，不能代替结构化字段。

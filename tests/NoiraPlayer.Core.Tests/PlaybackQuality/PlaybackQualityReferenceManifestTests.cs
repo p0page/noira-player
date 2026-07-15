@@ -577,6 +577,26 @@ public sealed class PlaybackQualityReferenceManifestTests
             report,
             "tracks.subtitleCueRenderCount"));
 
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(
+            report,
+            "tracks.subtitleCueRenderCount",
+            new[] { "tracks.subtitleCueRenderCount" }));
+        Assert.False(PlaybackQualityRequiredSignalPolicy.HasReportSignal(
+            report,
+            "tracks.subtitleCueRenderCount",
+            new[] { "tracks.selectedSubtitleStreamIndex" }));
+
+        report.Interaction.Attempted = true;
+        report.Interaction.SubtitleCueRenderCountDelta = 0;
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(
+            report,
+            "interaction.subtitleCueRenderCountDelta",
+            new[] { "interaction.subtitleCueRenderCountDelta" }));
+        Assert.False(PlaybackQualityRequiredSignalPolicy.HasReportSignal(
+            report,
+            "interaction.subtitleCueRenderCountDelta",
+            new[] { "interaction.selectedSubtitleStreamIndex" }));
+
         report.Tracks.SubtitleCueRenderCount = 1;
         Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(
             report,

@@ -321,9 +321,10 @@ try {
         throw 'Generated private Emby manifest must include a subtitle-switch case with the versioned recovery SLO.'
     }
     $validation = Get-Content -Raw -LiteralPath $validationPath | ConvertFrom-Json
-    if ($validation.coverage.status -ne 'ready' -or
-        $validation.coverage.isCoreEvaluationReady -ne $true) {
-        throw 'Generated private Emby manifest should be ready for Core evaluation.'
+    if ($validation.coverage.status -ne 'incomplete' -or
+        $validation.coverage.isCoreEvaluationReady -ne $false -or
+        -not ($validation.coverage.missingPurposes -contains 'error-handling')) {
+        throw 'A private Emby source manifest may be partial; deterministic missing-file coverage belongs to the local native suite.'
     }
 
     $requiredPurposes = @(
@@ -339,8 +340,7 @@ try {
         'timeline',
         'tracks',
         'subtitles',
-        'end-of-stream',
-        'error-handling'
+        'end-of-stream'
     )
     foreach ($purpose in $requiredPurposes) {
         if (-not ($validation.coverage.coveredPurposes -contains $purpose)) {
@@ -479,12 +479,11 @@ try {
         throw 'Generated manifest should include an HDR force-SDR case.'
     }
 
-    if (-not ($manifest.cases | Where-Object {
-        $_.caseId -eq 'private-emby/error-handling/missing-file' -and
-        ($_.purpose -contains 'error-handling') -and
+    if ($manifest.cases | Where-Object {
+        $_.caseId -eq 'private-emby/error-handling/missing-file' -or
         $_.uri -eq 'emby://quality-cases/missing-file-error-handling'
-    })) {
-        throw 'Generated manifest should include a secret-safe error-handling case.'
+    }) {
+        throw 'Private Emby manifests must not synthesize a fake Emby item for missing-file coverage; the local native suite owns that deterministic case.'
     }
 
     Write-Output 'private-emby-reference-manifest tests ok'

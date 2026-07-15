@@ -331,6 +331,26 @@ public sealed class NativePlaybackGraphDecouplingContractTests
     }
 
     [Fact]
+    public void Native_Headless_EndOfStream_Does_Not_Apply_Hidden_Frame_Count_Thresholds()
+    {
+        var root = FindRepositoryRoot();
+        var helper = File.ReadAllText(Path.Combine(
+            root,
+            "tests",
+            "NoiraPlayer.Native.Tests",
+            "NativePlaybackGraphHeadlessSmokeTests.cpp"));
+
+        Assert.Contains(
+            "assert(endOfStreamAttempted || playbackSnapshot.DecodedVideoFrames > 1);",
+            helper,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "assert(endOfStreamAttempted || playbackSnapshot.RenderedVideoFrames > 1);",
+            helper,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TenBit_Subtitle_Overlay_Uses_D3d_Texture_Composition()
     {
         var root = FindRepositoryRoot();

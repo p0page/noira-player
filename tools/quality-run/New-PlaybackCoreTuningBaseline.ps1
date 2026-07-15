@@ -359,7 +359,7 @@ Invoke-Checked dotnet @(
 )
 
 $finalManifestInputs = [System.Collections.Generic.List[string]]::new()
-$finalManifestInputs.Add($coreManifestPath)
+$finalManifestInputs.Add($executedCoreManifestPath)
 if (-not $SkipNativeHeadless) {
 
     if (-not (Test-Path -LiteralPath $nativeManifestPath)) {

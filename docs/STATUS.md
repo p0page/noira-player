@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-15 更新：统一 baseline 只归档实际执行 case，并修复三类证据误判
+
+复核发现，统一 baseline 最终 manifest 曾错误使用筛选前的完整 Core manifest；当 quarantine case 未执行时，最终 manifest、真实执行和 report 可能不再一一对应。现在最终归档只合并 `executedCoreManifestPath` 与真实 native manifest，并新增包含 quarantine 的回归测试，确保审计 manifest 可以保留未选 case，但正式统一 manifest 只能包含本轮实际执行 case。
+
+字幕计数的显式 `0` 现在被视为“存在的失败证据”，不再被 required-signal policy 误判为字段缺失；字幕是否成功仍由生命周期、轨道选择和 cue 增量判定，不会把零值包装成 pass。EOF case 也不再套用 helper 内未在 manifest 声明的最低帧数断言：自然 EOF、解码/呈现计数和预滚丢帧全部原样进入报告，由统一 evaluator 判断。私有 Emby manifest 已删除无法解析的伪造 missing-file item；缺失文件错误处理由真实 native 本地文件打开失败 case 覆盖。
+
+私有 HDR 样本已通过独立 `ffprobe` 读取实际码流，而非依赖文件名或 manifest expected。当前代表源均为 BT.2020/PQ 的 Dolby Vision profile 8、HDR10 base layer，私有 expected 已在 ignored 本地 manifest 中修正为 DV8 HDR10 fallback，不进入仓库。修复后的首轮统一运行实际执行并生成 36/36 份 native report，严格 report-set 有效；其中质量结果仍诚实保留 fail、error 和 unsupported。该轮随后暴露 EOF helper 的隐藏断言，因此只作为评测器诊断证据，不作为最终正式 baseline；需在当前代码上完成至少两轮同 manifest 重复运行。
+
+评测环境边界：明确的并行播放或人为高负载会使性能比较不可归因；日常 CPU、磁盘和网络抖动属于正常环境，不自动作废运行。性能结论必须依赖同一 commit、同一 manifest 的重复分布，并结合 transport wait、执行时长、媒体推进、帧节奏和跨 case 对照区分播放器缺陷、样本/网络问题与 flaky。单次异常不得直接驱动 Core 策略修改。
+
 ## 2026-07-15 更新：v0.20 将暂停恢复从日志文本升级为强制结构化证据
 
 审计发现，v0.19 的三条 native 暂停恢复 case 虽然真实执行并通过，但暂停时长、恢复耗时和前后帧计数只埋在 `lifecycle.resume.message` 文本里，标准 `interaction` 节为空。模型无法可靠区分“恢复成功”“无进度失败”和“采集缺失”，严格 report-set 也不会拒绝空结构。这与既定暂停恢复设计不符，属于评测器缺陷，不是 Core 改善。

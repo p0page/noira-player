@@ -632,7 +632,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                             report.Interaction.RenderedVideoFrameDelta.HasValue &&
                             report.Interaction.RenderedVideoFrameDelta.Value > 0;
                 case "interaction.subtitleCueRenderCountDelta":
-                    return report.Interaction.Attempted &&
+                    return presentSignals != null ||
+                        report.Interaction.Attempted &&
                         report.Interaction.SubtitleCueRenderCountDelta.HasValue &&
                         report.Interaction.SubtitleCueRenderCountDelta.Value > 0;
                 case "lifecycle.load":
@@ -654,7 +655,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 case "lifecycle.subtitle-switch":
                     return HasLifecycleOperation(report, "subtitle-switch");
                 case "tracks.subtitleCueRenderCount":
-                    return report.Tracks.SubtitleCueRenderCount > 0;
+                    return presentSignals != null || report.Tracks.SubtitleCueRenderCount > 0;
                 case "lifecycle.subtitle-off":
                     return HasLifecycleOperation(report, "subtitle-off");
                 case "lifecycle.error":

@@ -40,6 +40,23 @@ try {
         "hdrKind": "Sdr",
         "isDirectPlayable": true
       }
+    },
+    {
+      "caseId": "baseline/quarantine-not-executed",
+      "category": "quarantine",
+      "severity": "low",
+      "stability": "flaky",
+      "uri": "https://media.invalid/quarantine.mp4",
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "playback" },
+      "purpose": [ "frame-pacing" ],
+      "expected": {
+        "codec": "hevc",
+        "width": 320,
+        "height": 180,
+        "frameRate": 30,
+        "hdrKind": "Sdr",
+        "isDirectPlayable": true
+      }
     }
   ]
 }
@@ -149,19 +166,22 @@ exit 1
     }
 
     $summaryPath = Join-Path $outputRoot 'baseline-summary.local.json'
+    $coreManifestOutputPath = Join-Path $outputRoot 'manifests\core-reference-manifest.local.json'
     $manifestOutputPath = Join-Path $outputRoot 'manifests\unified-reference-manifest.local.json'
     $validationPath = Join-Path $outputRoot 'summaries\report-set-validation.local.json'
     $analysisPath = Join-Path $outputRoot 'summaries\report-analysis-summary.local.json'
     $runnerSummaryPath = Join-Path $outputRoot 'summaries\manifest-run-summary.local.json'
     $reportPath = Join-Path $outputRoot 'reports\baseline\native-open-error.json'
 
-    foreach ($path in @($summaryPath, $manifestOutputPath, $validationPath, $analysisPath, $runnerSummaryPath, $reportPath)) {
+    foreach ($path in @($summaryPath, $coreManifestOutputPath, $manifestOutputPath, $validationPath, $analysisPath, $runnerSummaryPath, $reportPath)) {
         if (-not (Test-Path -LiteralPath $path)) {
             throw ('Expected baseline artifact was not written: ' + $path)
         }
     }
 
     $summary = Get-Content -Raw -LiteralPath $summaryPath | ConvertFrom-Json
+    $coreManifestOutput = Get-Content -Raw -LiteralPath $coreManifestOutputPath | ConvertFrom-Json
+    $unifiedManifestOutput = Get-Content -Raw -LiteralPath $manifestOutputPath | ConvertFrom-Json
     $validation = Get-Content -Raw -LiteralPath $validationPath | ConvertFrom-Json
     $runnerSummary = Get-Content -Raw -LiteralPath $runnerSummaryPath | ConvertFrom-Json
     $materializedReport = Get-Content -Raw -LiteralPath $reportPath | ConvertFrom-Json
@@ -179,6 +199,12 @@ exit 1
         $summary.coreExecution.runner -ne 'native-manifest-runner-v0.2' -or
         $summary.coreExecution.seekPacketCacheEnabled -ne $false) {
         throw 'Expected baseline to contain one strict-valid native manifest-runner report.'
+    }
+
+    if (@($coreManifestOutput.cases).Count -ne 2 -or
+        @($unifiedManifestOutput.cases).Count -ne 1 -or
+        @($unifiedManifestOutput.cases)[0].caseId -ne 'baseline/native-open-error') {
+        throw 'The audit manifest may retain quarantine cases, but the final report-set manifest must contain only cases actually selected for execution.'
     }
 
     if ($materializedReport.report.expected.codec -ne 'hevc' -or
@@ -224,6 +250,8 @@ exit 1
 
     $env:NOIRAPLAYER_BASELINE_TEST_MISMATCH_RUN_ID = '1'
     $invalidOutputRoot = Join-Path $tempRoot 'invalid-report-set-output'
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     powershell -NoProfile -ExecutionPolicy Bypass -File $scriptPath `
         -PublicManifestPath $manifestPath `
         -NoPrivateManifest `
@@ -233,7 +261,9 @@ exit 1
         -DurationSeconds 1 `
         -AttemptTimeoutSeconds 5 `
         -OutputRoot $invalidOutputRoot 2>$null
-    if ($LASTEXITCODE -eq 0) {
+    $invalidReportSetExitCode = $LASTEXITCODE
+    $ErrorActionPreference = $previousErrorActionPreference
+    if ($invalidReportSetExitCode -eq 0) {
         throw 'Baseline must return non-zero when strict report-set validation fails.'
     }
     foreach ($path in @(
@@ -272,6 +302,7 @@ exit 1
         throw 'Baseline must fail when a selected stable/challenge case does not produce a raw report.'
     }
 
+    $global:LASTEXITCODE = 0
     Write-Output 'playback-core-tuning-baseline tests ok'
 }
 finally {

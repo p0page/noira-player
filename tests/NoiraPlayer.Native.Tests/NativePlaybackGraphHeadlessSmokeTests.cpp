@@ -1137,8 +1137,8 @@ int wmain(int argc, wchar_t** argv)
         std::cout << std::endl;
         ReportStage("completed");
 
-        assert(playbackSnapshot.DecodedVideoFrames > 1);
-        assert(playbackSnapshot.RenderedVideoFrames > 1);
+        assert(endOfStreamAttempted || playbackSnapshot.DecodedVideoFrames > 1);
+        assert(endOfStreamAttempted || playbackSnapshot.RenderedVideoFrames > 1);
         assert(playbackSnapshot.VideoDecodeDurationMsP50 > 0.0);
         assert(playbackSnapshot.VideoRenderDurationMsP50 > 0.0);
         assert(
