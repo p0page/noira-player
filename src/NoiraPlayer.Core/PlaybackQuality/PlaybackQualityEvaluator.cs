@@ -2030,6 +2030,15 @@ namespace NoiraPlayer.Core.PlaybackQuality
             RequireTimelineEvidence(report, report.Position.PostSeekAdvanced.HasValue, "position.postSeekAdvanced");
             RequireTimelineEvidence(report, report.Position.SeekOperationDurationMs.HasValue, "position.seekOperationDurationMs");
             RequireTimelineEvidence(report, report.Position.SeekRecoveryDurationMs.HasValue, "position.seekRecoveryDurationMs");
+            RequireTimelineEvidence(report, report.Position.SeekLockWaitDurationMs.HasValue, "position.seekLockWaitDurationMs");
+            RequireTimelineEvidence(report, report.Position.SeekExecutionDurationMs.HasValue, "position.seekExecutionDurationMs");
+            RequireTimelineEvidence(report, report.Position.SeekQuiesceDurationMs.HasValue, "position.seekQuiesceDurationMs");
+            RequireTimelineEvidence(report, report.Position.SeekReplayPreparationDurationMs.HasValue, "position.seekReplayPreparationDurationMs");
+            RequireTimelineEvidence(report, report.Position.SeekStateResetDurationMs.HasValue, "position.seekStateResetDurationMs");
+            RequireTimelineEvidence(report, report.Position.SeekMediaRepositionDurationMs.HasValue, "position.seekMediaRepositionDurationMs");
+            RequireTimelineEvidence(report, report.Position.SeekDependentDecoderFlushDurationMs.HasValue, "position.seekDependentDecoderFlushDurationMs");
+            RequireTimelineEvidence(report, report.Position.SeekPrerollRenderDurationMs.HasValue, "position.seekPrerollRenderDurationMs");
+            RequireTimelineEvidence(report, report.Position.SeekWorkerRestartDurationMs.HasValue, "position.seekWorkerRestartDurationMs");
             RequireTimelineEvidence(report, report.Position.SeekPacketCacheEnabled.HasValue, "position.seekPacketCacheEnabled");
             RequireTimelineEvidence(report, report.Position.SeekPacketCacheHit.HasValue, "position.seekPacketCacheHit");
             RequireTimelineEvidence(report, report.Position.SeekPacketCachePacketCount.HasValue, "position.seekPacketCachePacketCount");

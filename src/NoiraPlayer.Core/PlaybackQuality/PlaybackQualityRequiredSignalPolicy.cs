@@ -167,6 +167,15 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(requiredSignals, "position.seekPositionErrorMs");
                 AddUnique(requiredSignals, "position.seekOperationDurationMs");
                 AddUnique(requiredSignals, "position.seekRecoveryDurationMs");
+                AddUnique(requiredSignals, "position.seekLockWaitDurationMs");
+                AddUnique(requiredSignals, "position.seekExecutionDurationMs");
+                AddUnique(requiredSignals, "position.seekQuiesceDurationMs");
+                AddUnique(requiredSignals, "position.seekReplayPreparationDurationMs");
+                AddUnique(requiredSignals, "position.seekStateResetDurationMs");
+                AddUnique(requiredSignals, "position.seekMediaRepositionDurationMs");
+                AddUnique(requiredSignals, "position.seekDependentDecoderFlushDurationMs");
+                AddUnique(requiredSignals, "position.seekPrerollRenderDurationMs");
+                AddUnique(requiredSignals, "position.seekWorkerRestartDurationMs");
                 AddUnique(requiredSignals, "position.seekPacketCacheEnabled");
                 AddUnique(requiredSignals, "position.seekPacketCacheHit");
                 AddUnique(requiredSignals, "position.seekPacketCachePacketCount");
@@ -687,6 +696,24 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     return report.Position.SeekOperationDurationMs.HasValue;
                 case "position.seekRecoveryDurationMs":
                     return report.Position.SeekRecoveryDurationMs.HasValue;
+                case "position.seekLockWaitDurationMs":
+                    return report.Position.SeekLockWaitDurationMs.HasValue;
+                case "position.seekExecutionDurationMs":
+                    return report.Position.SeekExecutionDurationMs.HasValue;
+                case "position.seekQuiesceDurationMs":
+                    return report.Position.SeekQuiesceDurationMs.HasValue;
+                case "position.seekReplayPreparationDurationMs":
+                    return report.Position.SeekReplayPreparationDurationMs.HasValue;
+                case "position.seekStateResetDurationMs":
+                    return report.Position.SeekStateResetDurationMs.HasValue;
+                case "position.seekMediaRepositionDurationMs":
+                    return report.Position.SeekMediaRepositionDurationMs.HasValue;
+                case "position.seekDependentDecoderFlushDurationMs":
+                    return report.Position.SeekDependentDecoderFlushDurationMs.HasValue;
+                case "position.seekPrerollRenderDurationMs":
+                    return report.Position.SeekPrerollRenderDurationMs.HasValue;
+                case "position.seekWorkerRestartDurationMs":
+                    return report.Position.SeekWorkerRestartDurationMs.HasValue;
                 case "position.seekPacketCacheEnabled":
                     return report.Position.SeekPacketCacheEnabled.HasValue;
                 case "position.seekPacketCacheHit":

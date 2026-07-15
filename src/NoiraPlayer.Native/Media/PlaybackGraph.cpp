@@ -339,16 +339,36 @@ namespace winrt::NoiraPlayer::Native::implementation
             throw winrt::hresult_invalid_argument(L"Seek position cannot be negative.");
         }
 
-        std::lock_guard lock(m_graphMutex);
+        PlaybackGraphSeekTiming timing;
+        auto const lockStartedAt = std::chrono::steady_clock::now();
+        std::unique_lock lock(m_graphMutex);
+        timing.LockWaitDurationMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - lockStartedAt).count();
+        auto const executionStartedAt = std::chrono::steady_clock::now();
+
+        auto const quiesceStartedAt = std::chrono::steady_clock::now();
         auto restartVideoDecodeWorker = StopVideoDecodeWorkerForMutation();
-        ScopeExit restartVideoDecodeWorkerOnExit([this, restartVideoDecodeWorker]()
+        timing.QuiesceDurationMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - quiesceStartedAt).count();
+        ScopeExit restartVideoDecodeWorkerOnExit([this, restartVideoDecodeWorker, executionStartedAt, &timing]()
         {
+            auto const restartStartedAt = std::chrono::steady_clock::now();
             RestartVideoDecodeWorkerAfterMutation(restartVideoDecodeWorker);
+            timing.WorkerRestartDurationMs = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - restartStartedAt).count();
+            timing.ExecutionDurationMs = std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - executionStartedAt).count();
+            m_lastSeekTimingSnapshot = timing;
         });
         auto const previousPositionTicks = m_positionTicks;
+        auto const replayPreparationStartedAt = std::chrono::steady_clock::now();
         m_lastSeekReplaySnapshot = m_mediaSource.TryPrepareSeekReplay(
             positionTicks,
             previousPositionTicks);
+        timing.ReplayPreparationDurationMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - replayPreparationStartedAt).count();
+
+        auto const stateResetStartedAt = std::chrono::steady_clock::now();
         m_positionTicks = positionTicks;
         m_positionSnapshotTicks.store(positionTicks, std::memory_order_relaxed);
         m_pendingVideoFrame.reset();
@@ -356,6 +376,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_seekPresentationTracker.BeginSeek(m_renderedVideoFrameCount);
         ApplyFramePacingPolicyMetrics();
         m_audioRenderer.Flush();
+        timing.StateResetDurationMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - stateResetStartedAt).count();
+
+        auto const mediaRepositionStartedAt = std::chrono::steady_clock::now();
         if (m_lastSeekReplaySnapshot.Hit)
         {
             m_videoDecoder.Flush(positionTicks);
@@ -364,15 +388,25 @@ namespace winrt::NoiraPlayer::Native::implementation
         {
             m_videoDecoder.Seek(positionTicks);
         }
+        timing.MediaRepositionDurationMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - mediaRepositionStartedAt).count();
         auto sourceVideo = m_mediaSource.BestVideoStreamSnapshot();
         auto timeline = m_mediaSource.TimelineSnapshot(sourceVideo ? sourceVideo->StreamIndex : -1);
         m_qualityMetrics.SeekDemuxTargetTicks =
             m_lastSeekReplaySnapshot.Hit ? -1 : timeline.LastSeekDemuxTargetTicks;
+
+        auto const dependentDecoderFlushStartedAt = std::chrono::steady_clock::now();
         m_audioDecoder.Flush(positionTicks);
         m_subtitleDecoder.Flush();
         m_subtitleRenderer.ClearCue();
+        timing.DependentDecoderFlushDurationMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - dependentDecoderFlushStartedAt).count();
+
+        auto const prerollRenderStartedAt = std::chrono::steady_clock::now();
         SetVideoPrerollTarget(positionTicks);
         RenderNextFrame();
+        timing.PrerollRenderDurationMs = std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - prerollRenderStartedAt).count();
         m_stateChanged.notify_all();
     }
 
@@ -762,6 +796,12 @@ namespace winrt::NoiraPlayer::Native::implementation
     {
         std::lock_guard lock(m_graphMutex);
         return m_lastSeekReplaySnapshot;
+    }
+
+    PlaybackGraphSeekTiming PlaybackGraph::LastSeekTimingSnapshot() const
+    {
+        std::lock_guard lock(m_graphMutex);
+        return m_lastSeekTimingSnapshot;
     }
 
     void PlaybackGraph::StartVideoDecodeWorker()

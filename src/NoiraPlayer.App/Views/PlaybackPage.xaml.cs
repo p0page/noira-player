@@ -2137,6 +2137,15 @@ namespace NoiraPlayer.App.Views
 
             position.SeekDemuxTargetTicks = metrics.SeekDemuxTargetTicks;
             position.FirstPresentedPositionTicks = metrics.FirstPresentedPositionTicks;
+            position.SeekLockWaitDurationMs = metrics.SeekLockWaitDurationMs;
+            position.SeekExecutionDurationMs = metrics.SeekExecutionDurationMs;
+            position.SeekQuiesceDurationMs = metrics.SeekQuiesceDurationMs;
+            position.SeekReplayPreparationDurationMs = metrics.SeekReplayPreparationDurationMs;
+            position.SeekStateResetDurationMs = metrics.SeekStateResetDurationMs;
+            position.SeekMediaRepositionDurationMs = metrics.SeekMediaRepositionDurationMs;
+            position.SeekDependentDecoderFlushDurationMs = metrics.SeekDependentDecoderFlushDurationMs;
+            position.SeekPrerollRenderDurationMs = metrics.SeekPrerollRenderDurationMs;
+            position.SeekWorkerRestartDurationMs = metrics.SeekWorkerRestartDurationMs;
             position.SeekPacketCacheEnabled = metrics.SeekPacketCacheEnabled;
             position.SeekPacketCacheHit = metrics.SeekPacketCacheHit;
             position.SeekPacketCachePacketCount = metrics.SeekPacketCachePacketCount;
@@ -2432,6 +2441,15 @@ namespace NoiraPlayer.App.Views
                     VideoStreamStartTimeTicks = source.VideoStreamStartTimeTicks,
                     SeekDemuxTargetTicks = source.SeekDemuxTargetTicks,
                     FirstPresentedPositionTicks = source.FirstPresentedPositionTicks,
+                    SeekLockWaitDurationMs = source.SeekLockWaitDurationMs,
+                    SeekExecutionDurationMs = source.SeekExecutionDurationMs,
+                    SeekQuiesceDurationMs = source.SeekQuiesceDurationMs,
+                    SeekReplayPreparationDurationMs = source.SeekReplayPreparationDurationMs,
+                    SeekStateResetDurationMs = source.SeekStateResetDurationMs,
+                    SeekMediaRepositionDurationMs = source.SeekMediaRepositionDurationMs,
+                    SeekDependentDecoderFlushDurationMs = source.SeekDependentDecoderFlushDurationMs,
+                    SeekPrerollRenderDurationMs = source.SeekPrerollRenderDurationMs,
+                    SeekWorkerRestartDurationMs = source.SeekWorkerRestartDurationMs,
                     SeekPacketCacheEnabled = source.SeekPacketCacheEnabled,
                     SeekPacketCacheHit = source.SeekPacketCacheHit,
                     SeekPacketCachePacketCount = source.SeekPacketCachePacketCount,

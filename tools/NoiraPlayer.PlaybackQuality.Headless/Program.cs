@@ -286,6 +286,15 @@ internal static class NativeHeadlessHarness
                 SeekRecoveryDurationMs = helper.Seek.Attempted
                     ? helper.Seek.RecoveryDurationMs
                     : null,
+                SeekLockWaitDurationMs = helper.Seek.Attempted ? helper.Seek.LockWaitDurationMs : null,
+                SeekExecutionDurationMs = helper.Seek.Attempted ? helper.Seek.ExecutionDurationMs : null,
+                SeekQuiesceDurationMs = helper.Seek.Attempted ? helper.Seek.QuiesceDurationMs : null,
+                SeekReplayPreparationDurationMs = helper.Seek.Attempted ? helper.Seek.ReplayPreparationDurationMs : null,
+                SeekStateResetDurationMs = helper.Seek.Attempted ? helper.Seek.StateResetDurationMs : null,
+                SeekMediaRepositionDurationMs = helper.Seek.Attempted ? helper.Seek.MediaRepositionDurationMs : null,
+                SeekDependentDecoderFlushDurationMs = helper.Seek.Attempted ? helper.Seek.DependentDecoderFlushDurationMs : null,
+                SeekPrerollRenderDurationMs = helper.Seek.Attempted ? helper.Seek.PrerollRenderDurationMs : null,
+                SeekWorkerRestartDurationMs = helper.Seek.Attempted ? helper.Seek.WorkerRestartDurationMs : null,
                 SeekPacketCacheEnabled = helper.Seek.Attempted
                     ? helper.Seek.PacketCacheEnabled
                     : null,
@@ -1784,6 +1793,15 @@ internal static class NativeHeadlessHarness
             !TryGetRequiredUInt64(values, "preSeekDroppedVideoFrames", out var preSeekDroppedVideoFrames, out error) ||
             !TryGetRequiredNonNegativeDouble(values, "seekOperationDurationMs", out var operationDurationMs, out error) ||
             !TryGetRequiredNonNegativeDouble(values, "seekRecoveryDurationMs", out var recoveryDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, "seekLockWaitDurationMs", out var lockWaitDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, "seekExecutionDurationMs", out var executionDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, "seekQuiesceDurationMs", out var quiesceDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, "seekReplayPreparationDurationMs", out var replayPreparationDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, "seekStateResetDurationMs", out var stateResetDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, "seekMediaRepositionDurationMs", out var mediaRepositionDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, "seekDependentDecoderFlushDurationMs", out var dependentDecoderFlushDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, "seekPrerollRenderDurationMs", out var prerollRenderDurationMs, out error) ||
+            !TryGetRequiredNonNegativeDouble(values, "seekWorkerRestartDurationMs", out var workerRestartDurationMs, out error) ||
             !TryGetAttempted(values, "seekPacketCacheEnabled", out var packetCacheEnabled, out error) ||
             !TryGetAttempted(values, "seekPacketCacheHit", out var packetCacheHit, out error) ||
             !TryGetRequiredUInt64(values, "seekPacketCachePacketCount", out var packetCachePacketCount, out error) ||
@@ -1829,6 +1847,15 @@ internal static class NativeHeadlessHarness
         outcome.PreSeekDroppedVideoFrames = preSeekDroppedVideoFrames;
         outcome.OperationDurationMs = operationDurationMs;
         outcome.RecoveryDurationMs = recoveryDurationMs;
+        outcome.LockWaitDurationMs = lockWaitDurationMs;
+        outcome.ExecutionDurationMs = executionDurationMs;
+        outcome.QuiesceDurationMs = quiesceDurationMs;
+        outcome.ReplayPreparationDurationMs = replayPreparationDurationMs;
+        outcome.StateResetDurationMs = stateResetDurationMs;
+        outcome.MediaRepositionDurationMs = mediaRepositionDurationMs;
+        outcome.DependentDecoderFlushDurationMs = dependentDecoderFlushDurationMs;
+        outcome.PrerollRenderDurationMs = prerollRenderDurationMs;
+        outcome.WorkerRestartDurationMs = workerRestartDurationMs;
         outcome.PacketCacheEnabled = packetCacheEnabled;
         outcome.PacketCacheHit = packetCacheHit;
         outcome.PacketCachePacketCount = packetCachePacketCount;
@@ -3195,6 +3222,24 @@ internal sealed class NativeHeadlessSeekOutcome
     public double OperationDurationMs { get; set; }
 
     public double RecoveryDurationMs { get; set; }
+
+    public double LockWaitDurationMs { get; set; }
+
+    public double ExecutionDurationMs { get; set; }
+
+    public double QuiesceDurationMs { get; set; }
+
+    public double ReplayPreparationDurationMs { get; set; }
+
+    public double StateResetDurationMs { get; set; }
+
+    public double MediaRepositionDurationMs { get; set; }
+
+    public double DependentDecoderFlushDurationMs { get; set; }
+
+    public double PrerollRenderDurationMs { get; set; }
+
+    public double WorkerRestartDurationMs { get; set; }
 
     public bool PacketCacheEnabled { get; set; }
 

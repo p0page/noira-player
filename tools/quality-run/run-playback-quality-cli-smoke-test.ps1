@@ -177,6 +177,15 @@ function Set-SmokeNativeExecutionEvidence {
         $payload.position | Add-Member -NotePropertyName postSeekAdvanced -NotePropertyValue $true -Force
         $payload.position | Add-Member -NotePropertyName seekOperationDurationMs -NotePropertyValue 120.0 -Force
         $payload.position | Add-Member -NotePropertyName seekRecoveryDurationMs -NotePropertyValue 150.0 -Force
+        $payload.position | Add-Member -NotePropertyName seekLockWaitDurationMs -NotePropertyValue 1.0 -Force
+        $payload.position | Add-Member -NotePropertyName seekExecutionDurationMs -NotePropertyValue 119.0 -Force
+        $payload.position | Add-Member -NotePropertyName seekQuiesceDurationMs -NotePropertyValue 2.0 -Force
+        $payload.position | Add-Member -NotePropertyName seekReplayPreparationDurationMs -NotePropertyValue 1.0 -Force
+        $payload.position | Add-Member -NotePropertyName seekStateResetDurationMs -NotePropertyValue 2.0 -Force
+        $payload.position | Add-Member -NotePropertyName seekMediaRepositionDurationMs -NotePropertyValue 100.0 -Force
+        $payload.position | Add-Member -NotePropertyName seekDependentDecoderFlushDurationMs -NotePropertyValue 3.0 -Force
+        $payload.position | Add-Member -NotePropertyName seekPrerollRenderDurationMs -NotePropertyValue 8.0 -Force
+        $payload.position | Add-Member -NotePropertyName seekWorkerRestartDurationMs -NotePropertyValue 3.0 -Force
         $payload.position | Add-Member -NotePropertyName seekPacketCacheEnabled -NotePropertyValue $false -Force
         $payload.position | Add-Member -NotePropertyName seekPacketCacheHit -NotePropertyValue $false -Force
         $payload.position | Add-Member -NotePropertyName seekPacketCachePacketCount -NotePropertyValue ([uint64]0) -Force
@@ -722,8 +731,8 @@ try {
         throw 'Expected analyze-report-set output schemaVersion 1.'
     }
 
-    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.20') {
-        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.20.'
+    if ($analysisSet.evaluationVersion -ne 'playback-quality-v0.21') {
+        throw 'Expected analyze-report-set output evaluationVersion playback-quality-v0.21.'
     }
 
     if ($analysisSet.action -ne 'fix-report-analysis') {
@@ -1037,8 +1046,8 @@ try {
         throw 'Expected playback quality CLI plan-runs output schemaVersion 1.'
     }
 
-    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.20') {
-        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.20.'
+    if ($runPlan.evaluationVersion -ne 'playback-quality-v0.21') {
+        throw 'Expected playback quality CLI plan-runs output evaluationVersion playback-quality-v0.21.'
     }
 
     if ($runPlan.caseCount -ne 3) {
@@ -1088,7 +1097,7 @@ try {
 
     $materializedBaselineSummary = Get-Content -Raw -LiteralPath $materializedBaselineSummaryPath | ConvertFrom-Json
     if ($materializedBaselineSummary.schemaVersion -ne 1 -or
-        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.20' -or
+        $materializedBaselineSummary.evaluationVersion -ne 'playback-quality-v0.21' -or
         $materializedBaselineSummary.caseCount -ne 3 -or
         $materializedBaselineSummary.reportsDirectory -ne $materializedBaselineDir) {
         throw 'Expected materialize-baseline-report-set summary to describe generated reports.'
@@ -3755,8 +3764,8 @@ try {
         throw 'Expected playback quality CLI evaluate-candidate output schemaVersion 1.'
     }
 
-    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.20') {
-        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.20.'
+    if ($candidateEvaluation.evaluationVersion -ne 'playback-quality-v0.21') {
+        throw 'Expected playback quality CLI evaluate-candidate output evaluationVersion playback-quality-v0.21.'
     }
 
     if ($candidateEvaluation.action -ne 'accept-candidate') {

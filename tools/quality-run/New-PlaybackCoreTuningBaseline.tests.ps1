@@ -89,7 +89,7 @@ $reportPath = Join-Path $reportsDir ($caseId.Replace('/', [System.IO.Path]::Dire
 New-Item -ItemType Directory -Path (Split-Path -Parent $reportPath) -Force | Out-Null
 @{
     schemaVersion = 1
-    evaluationVersion = 'playback-quality-v0.20'
+    evaluationVersion = 'playback-quality-v0.21'
     caseMetadata = @{
         caseId = $caseId
         category = 'stable'

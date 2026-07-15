@@ -2,6 +2,12 @@
 
 评测体系的第一职责是诚实暴露事实，不是让当前播放器显得更好。
 
+## 2026-07-15 seek 阶段证据原则
+
+seek 调用耗时、首帧恢复耗时和落点误差回答的是不同问题，不能相互替代。对于正式 timeline/seek case，总调用还必须拆为锁等待、worker 静默、replay 判定、状态重置、媒体重定位、依赖解码器清理、首帧预卷和 worker 重启阶段。阶段数据来自真实播放执行；缺失阶段属于证据不足，不能用总耗时、manifest expected 或相邻运行推算。
+
+正常 CPU、磁盘和网络抖动属于真实运行分布，应通过同一 manifest 的重复样本和 transport/stage 证据解释。只有明确的并行播放或人为持续高负载才构成不可归因干扰。单次快慢不能直接驱动 Core 策略修改，也不能被静默删除。
+
 ## 2026-07-13 补充原则
 
 seek cache 的开关、命中、包数、字节数、窗口和 fallback reason 属于解释 seek 结果的上下文证据，不是独立质量分数。cache hit 时必须以 `seekDemuxTargetTicks = -1` 证明没有发生 demux seek；cache miss 时必须保留具体 fallback reason。评测不得把“开启 cache”本身算作改善，也不得因 cache 容量自然波动自动判定回归。

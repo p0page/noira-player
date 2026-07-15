@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-15 更新：v0.21 将 seek 总耗时拆为可归因阶段
+
+评测契约升级为 `playback-quality-v0.21`。timeline/seek case 除调用返回耗时和首帧恢复耗时外，现在还必须记录 graph 锁等待、解码 worker 静默、seek replay 判定、状态重置、媒体重定位、其余解码器清理、首帧预卷渲染和 worker 重启九段非负耗时。缺少任一字段都会被 native parser、required-signal policy、evaluator 和模型分析判为证据不足，不能继续只凭一个总耗时推测网络、锁或解码器问题。相同字段已贯通 native-headless 与完整 App-hosted 路径，并进入 baseline/candidate 逐信号比较。
+
+本地真实 timeline case 的 seek 调用约 `15.83ms`，首帧恢复约 `78.92ms`，落点误差 `12ms`；其中媒体重定位约 `0.20ms`，worker 重启约 `14.67ms`，锁等待接近零。这说明阶段拆分能够改变根因判断，但该样本不能代表 HTTP/Emby 远距离 seek。当前只增强评测可观测性，没有改变 seek 策略，也不声称进度条或拖动问题已修复。
+
+进度问题按责任边界拆分：native Core 负责逻辑时间、demux 目标、首帧落点、后续推进和 seek 是否真正执行；App 负责使用所选媒体源时长映射进度条并呈现确认后的实际位置。后续先用 v0.21 对公开 HTTP 和私有 Emby timeline case 建立重复 baseline，再决定同步 seek、worker 重启或位置语义的最小调整；App 比例映射只在 App-hosted 复核中单独处理。正常机器和网络抖动保留在重复分布中，不因单次波动作废。
+
+验证：Core 全量 `1158/1158` 通过；native parser 新增九个缺字段负向 case 并通过；完整真实 native-headless smoke、Native Debug x64、WinRT IDL/WinMD 生成以及 Modern App Debug x64 构建均成功。
+
 ## 2026-07-15 更新：统一 baseline 只归档实际执行 case，并修复三类证据误判
 
 复核发现，统一 baseline 最终 manifest 曾错误使用筛选前的完整 Core manifest；当 quarantine case 未执行时，最终 manifest、真实执行和 report 可能不再一一对应。现在最终归档只合并 `executedCoreManifestPath` 与真实 native manifest，并新增包含 quarantine 的回归测试，确保审计 manifest 可以保留未选 case，但正式统一 manifest 只能包含本轮实际执行 case。

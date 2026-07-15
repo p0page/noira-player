@@ -1662,6 +1662,15 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "position.seekRecoveryDurationMs",
                 baseline.Position.SeekRecoveryDurationMs,
                 candidate.Position.SeekRecoveryDurationMs);
+            CompareLowerIsBetterTimelineMetric(comparison, "position.seekLockWaitDurationMs", baseline.Position.SeekLockWaitDurationMs, candidate.Position.SeekLockWaitDurationMs);
+            CompareLowerIsBetterTimelineMetric(comparison, "position.seekExecutionDurationMs", baseline.Position.SeekExecutionDurationMs, candidate.Position.SeekExecutionDurationMs);
+            CompareLowerIsBetterTimelineMetric(comparison, "position.seekQuiesceDurationMs", baseline.Position.SeekQuiesceDurationMs, candidate.Position.SeekQuiesceDurationMs);
+            CompareLowerIsBetterTimelineMetric(comparison, "position.seekReplayPreparationDurationMs", baseline.Position.SeekReplayPreparationDurationMs, candidate.Position.SeekReplayPreparationDurationMs);
+            CompareLowerIsBetterTimelineMetric(comparison, "position.seekStateResetDurationMs", baseline.Position.SeekStateResetDurationMs, candidate.Position.SeekStateResetDurationMs);
+            CompareLowerIsBetterTimelineMetric(comparison, "position.seekMediaRepositionDurationMs", baseline.Position.SeekMediaRepositionDurationMs, candidate.Position.SeekMediaRepositionDurationMs);
+            CompareLowerIsBetterTimelineMetric(comparison, "position.seekDependentDecoderFlushDurationMs", baseline.Position.SeekDependentDecoderFlushDurationMs, candidate.Position.SeekDependentDecoderFlushDurationMs);
+            CompareLowerIsBetterTimelineMetric(comparison, "position.seekPrerollRenderDurationMs", baseline.Position.SeekPrerollRenderDurationMs, candidate.Position.SeekPrerollRenderDurationMs);
+            CompareLowerIsBetterTimelineMetric(comparison, "position.seekWorkerRestartDurationMs", baseline.Position.SeekWorkerRestartDurationMs, candidate.Position.SeekWorkerRestartDurationMs);
             CompareOptionalTimelineContext(
                 comparison,
                 "position.seekPacketCacheEnabled",

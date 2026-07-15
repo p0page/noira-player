@@ -24,6 +24,7 @@ using winrt::NoiraPlayer::Native::implementation::DxDeviceResources;
 using winrt::NoiraPlayer::Native::implementation::HdrDisplayRefreshRatePolicy;
 using winrt::NoiraPlayer::Native::implementation::PlaybackGraph;
 using winrt::NoiraPlayer::Native::implementation::PlaybackGraphOpenRequest;
+using winrt::NoiraPlayer::Native::implementation::PlaybackGraphSeekTiming;
 
 namespace
 {
@@ -170,6 +171,7 @@ namespace
         uint64_t PreSeekDroppedVideoFrames{0};
         double OperationDurationMs{0.0};
         double RecoveryDurationMs{0.0};
+        PlaybackGraphSeekTiming Timing;
         bool PacketCacheEnabled{false};
         bool PacketCacheHit{false};
         uint64_t PacketCachePacketCount{0};
@@ -706,6 +708,7 @@ int wmain(int argc, wchar_t** argv)
             }
 
             auto seekReplay = graph.LastSeekReplaySnapshot();
+            seek.Timing = graph.LastSeekTimingSnapshot();
             seek.PacketCacheEnabled = seekReplay.Enabled;
             seek.PacketCacheHit = seekReplay.Hit;
             seek.PacketCachePacketCount = seekReplay.PacketCount;
@@ -862,6 +865,15 @@ int wmain(int argc, wchar_t** argv)
             << " seekActualPositionTicks=" << seek.ActualPositionTicks.value_or(-1)
             << " seekOperationDurationMs=" << seek.OperationDurationMs
             << " seekRecoveryDurationMs=" << seek.RecoveryDurationMs
+            << " seekLockWaitDurationMs=" << seek.Timing.LockWaitDurationMs
+            << " seekExecutionDurationMs=" << seek.Timing.ExecutionDurationMs
+            << " seekQuiesceDurationMs=" << seek.Timing.QuiesceDurationMs
+            << " seekReplayPreparationDurationMs=" << seek.Timing.ReplayPreparationDurationMs
+            << " seekStateResetDurationMs=" << seek.Timing.StateResetDurationMs
+            << " seekMediaRepositionDurationMs=" << seek.Timing.MediaRepositionDurationMs
+            << " seekDependentDecoderFlushDurationMs=" << seek.Timing.DependentDecoderFlushDurationMs
+            << " seekPrerollRenderDurationMs=" << seek.Timing.PrerollRenderDurationMs
+            << " seekWorkerRestartDurationMs=" << seek.Timing.WorkerRestartDurationMs
             << " seekPacketCacheEnabled=" << (seek.PacketCacheEnabled ? 1 : 0)
             << " seekPacketCacheHit=" << (seek.PacketCacheHit ? 1 : 0)
             << " seekPacketCachePacketCount=" << seek.PacketCachePacketCount

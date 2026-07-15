@@ -150,6 +150,11 @@ public sealed class AppHostedQualityCaptureContractTests
         Assert.Contains("SeekOperationDurationMs = seekStartedAt.Elapsed.TotalMilliseconds", seekProbeMethod, StringComparison.Ordinal);
         Assert.Contains("await WaitForQualityRunSeekPresentationAsync", seekProbeMethod, StringComparison.Ordinal);
         Assert.Contains("SeekRecoveryDurationMs = seekStartedAt.Elapsed.TotalMilliseconds", seekProbeMethod, StringComparison.Ordinal);
+        Assert.Contains("SeekLockWaitDurationMs = metrics.SeekLockWaitDurationMs", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("SeekExecutionDurationMs = metrics.SeekExecutionDurationMs", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("SeekMediaRepositionDurationMs = metrics.SeekMediaRepositionDurationMs", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("SeekPrerollRenderDurationMs = metrics.SeekPrerollRenderDurationMs", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("SeekWorkerRestartDurationMs = metrics.SeekWorkerRestartDurationMs", playbackPage, StringComparison.Ordinal);
         Assert.DoesNotContain("await Task.Delay(shortDelay)", seekProbeMethod, StringComparison.Ordinal);
         Assert.Contains("request.QualitySeekTargetPositionTicks", seekProbeMethod, StringComparison.Ordinal);
         Assert.DoesNotContain("CalculateQualityRunSeekTargetTicks", playbackPage, StringComparison.Ordinal);

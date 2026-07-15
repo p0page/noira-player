@@ -51,7 +51,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
     public sealed class PlaybackQualityRunResult
     {
-        public const string CurrentEvaluationVersion = "playback-quality-v0.20";
+        public const string CurrentEvaluationVersion = "playback-quality-v0.21";
 
         public PlaybackQualityRunResult(
             PlaybackQualityReport report,
@@ -264,6 +264,15 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 SeekPositionErrorMs = source.SeekPositionErrorMs,
                 SeekOperationDurationMs = source.SeekOperationDurationMs,
                 SeekRecoveryDurationMs = source.SeekRecoveryDurationMs,
+                SeekLockWaitDurationMs = source.SeekLockWaitDurationMs,
+                SeekExecutionDurationMs = source.SeekExecutionDurationMs,
+                SeekQuiesceDurationMs = source.SeekQuiesceDurationMs,
+                SeekReplayPreparationDurationMs = source.SeekReplayPreparationDurationMs,
+                SeekStateResetDurationMs = source.SeekStateResetDurationMs,
+                SeekMediaRepositionDurationMs = source.SeekMediaRepositionDurationMs,
+                SeekDependentDecoderFlushDurationMs = source.SeekDependentDecoderFlushDurationMs,
+                SeekPrerollRenderDurationMs = source.SeekPrerollRenderDurationMs,
+                SeekWorkerRestartDurationMs = source.SeekWorkerRestartDurationMs,
                 SeekPacketCacheEnabled = source.SeekPacketCacheEnabled,
                 SeekPacketCacheHit = source.SeekPacketCacheHit,
                 SeekPacketCachePacketCount = source.SeekPacketCachePacketCount,

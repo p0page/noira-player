@@ -283,6 +283,16 @@ namespace winrt::NoiraPlayer::Native::implementation
         metrics.VideoStreamStartTimeTicks(snapshot.VideoStreamStartTimeTicks);
         metrics.SeekDemuxTargetTicks(snapshot.SeekDemuxTargetTicks);
         metrics.FirstPresentedPositionTicks(snapshot.FirstPresentedPositionTicks);
+        auto seekTiming = m_graph->LastSeekTimingSnapshot();
+        metrics.SeekLockWaitDurationMs(seekTiming.LockWaitDurationMs);
+        metrics.SeekExecutionDurationMs(seekTiming.ExecutionDurationMs);
+        metrics.SeekQuiesceDurationMs(seekTiming.QuiesceDurationMs);
+        metrics.SeekReplayPreparationDurationMs(seekTiming.ReplayPreparationDurationMs);
+        metrics.SeekStateResetDurationMs(seekTiming.StateResetDurationMs);
+        metrics.SeekMediaRepositionDurationMs(seekTiming.MediaRepositionDurationMs);
+        metrics.SeekDependentDecoderFlushDurationMs(seekTiming.DependentDecoderFlushDurationMs);
+        metrics.SeekPrerollRenderDurationMs(seekTiming.PrerollRenderDurationMs);
+        metrics.SeekWorkerRestartDurationMs(seekTiming.WorkerRestartDurationMs);
         auto seekReplay = m_graph->LastSeekReplaySnapshot();
         metrics.SeekPacketCacheEnabled(seekReplay.Enabled);
         metrics.SeekPacketCacheHit(seekReplay.Hit);

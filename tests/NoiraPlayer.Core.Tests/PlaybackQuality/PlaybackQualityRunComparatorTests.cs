@@ -953,6 +953,15 @@ public sealed class PlaybackQualityRunComparatorTests
             Check("SeekRecoveryDurationMs", "fail", "timeline", "position.seekRecoveryDurationMs", "2000", "5000"));
         baseline.Position.SeekOperationDurationMs = 4800;
         baseline.Position.SeekRecoveryDurationMs = 5000;
+        baseline.Position.SeekLockWaitDurationMs = 5;
+        baseline.Position.SeekExecutionDurationMs = 4795;
+        baseline.Position.SeekQuiesceDurationMs = 20;
+        baseline.Position.SeekReplayPreparationDurationMs = 10;
+        baseline.Position.SeekStateResetDurationMs = 5;
+        baseline.Position.SeekMediaRepositionDurationMs = 4500;
+        baseline.Position.SeekDependentDecoderFlushDurationMs = 10;
+        baseline.Position.SeekPrerollRenderDurationMs = 200;
+        baseline.Position.SeekWorkerRestartDurationMs = 50;
         baseline.Position.SeekDemuxTargetTicks = 10_000_000;
         baseline.Position.PostSeekPositionTicks = 30_000_000;
         baseline.Position.SeekPacketCacheEnabled = false;
@@ -967,6 +976,15 @@ public sealed class PlaybackQualityRunComparatorTests
             Check("SeekRecoveryDurationMs", "pass", "timeline", "position.seekRecoveryDurationMs", "2000", "900"));
         candidate.Position.SeekOperationDurationMs = 800;
         candidate.Position.SeekRecoveryDurationMs = 900;
+        candidate.Position.SeekLockWaitDurationMs = 2;
+        candidate.Position.SeekExecutionDurationMs = 798;
+        candidate.Position.SeekQuiesceDurationMs = 10;
+        candidate.Position.SeekReplayPreparationDurationMs = 5;
+        candidate.Position.SeekStateResetDurationMs = 4;
+        candidate.Position.SeekMediaRepositionDurationMs = 500;
+        candidate.Position.SeekDependentDecoderFlushDurationMs = 8;
+        candidate.Position.SeekPrerollRenderDurationMs = 150;
+        candidate.Position.SeekWorkerRestartDurationMs = 40;
         candidate.Position.SeekDemuxTargetTicks = -1;
         candidate.Position.PostSeekPositionTicks = 31_000_000;
         candidate.Position.SeekPacketCacheEnabled = true;
@@ -980,6 +998,8 @@ public sealed class PlaybackQualityRunComparatorTests
 
         Assert.Contains("position.seekOperationDurationMs", comparison.Coverage.MatchedSignals);
         Assert.Contains("position.seekRecoveryDurationMs", comparison.Coverage.MatchedSignals);
+        Assert.Contains("position.seekMediaRepositionDurationMs", comparison.Coverage.MatchedSignals);
+        Assert.Contains("position.seekWorkerRestartDurationMs", comparison.Coverage.MatchedSignals);
         Assert.Contains("position.seekPacketCacheEnabled", comparison.Coverage.MatchedSignals);
         Assert.Contains("position.seekPacketCacheHit", comparison.Coverage.MatchedSignals);
         Assert.Contains("position.seekPacketCachePacketCount", comparison.Coverage.MatchedSignals);

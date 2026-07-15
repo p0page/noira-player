@@ -2420,6 +2420,15 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddMissingTimelineEvidence(analysis, report.Position.PostSeekAdvanced.HasValue, "position.postSeekAdvanced");
                 AddMissingTimelineEvidence(analysis, report.Position.SeekOperationDurationMs.HasValue, "position.seekOperationDurationMs");
                 AddMissingTimelineEvidence(analysis, report.Position.SeekRecoveryDurationMs.HasValue, "position.seekRecoveryDurationMs");
+                AddMissingTimelineEvidence(analysis, report.Position.SeekLockWaitDurationMs.HasValue, "position.seekLockWaitDurationMs");
+                AddMissingTimelineEvidence(analysis, report.Position.SeekExecutionDurationMs.HasValue, "position.seekExecutionDurationMs");
+                AddMissingTimelineEvidence(analysis, report.Position.SeekQuiesceDurationMs.HasValue, "position.seekQuiesceDurationMs");
+                AddMissingTimelineEvidence(analysis, report.Position.SeekReplayPreparationDurationMs.HasValue, "position.seekReplayPreparationDurationMs");
+                AddMissingTimelineEvidence(analysis, report.Position.SeekStateResetDurationMs.HasValue, "position.seekStateResetDurationMs");
+                AddMissingTimelineEvidence(analysis, report.Position.SeekMediaRepositionDurationMs.HasValue, "position.seekMediaRepositionDurationMs");
+                AddMissingTimelineEvidence(analysis, report.Position.SeekDependentDecoderFlushDurationMs.HasValue, "position.seekDependentDecoderFlushDurationMs");
+                AddMissingTimelineEvidence(analysis, report.Position.SeekPrerollRenderDurationMs.HasValue, "position.seekPrerollRenderDurationMs");
+                AddMissingTimelineEvidence(analysis, report.Position.SeekWorkerRestartDurationMs.HasValue, "position.seekWorkerRestartDurationMs");
                 AddMissingTimelineEvidence(analysis, report.Position.SeekPacketCacheEnabled.HasValue, "position.seekPacketCacheEnabled");
                 AddMissingTimelineEvidence(analysis, report.Position.SeekPacketCacheHit.HasValue, "position.seekPacketCacheHit");
                 AddMissingTimelineEvidence(analysis, report.Position.SeekPacketCachePacketCount.HasValue, "position.seekPacketCachePacketCount");
@@ -3071,6 +3080,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 AddUnique(analysis.EvidenceSignals, "position.seekRecoveryDurationMs");
             }
 
+            AddSeekStageEvidenceSignals(analysis, report.Position);
+
             if (report.Position.SeekPacketCacheEnabled.HasValue)
             {
                 AddUnique(analysis.EvidenceSignals, "position.seekPacketCacheEnabled");
@@ -3554,6 +3565,32 @@ namespace NoiraPlayer.Core.PlaybackQuality
             if (!present)
             {
                 AddUnique(analysis.MissingEvidence, signal);
+            }
+        }
+
+        private static void AddSeekStageEvidenceSignals(
+            PlaybackQualityModelAnalysis analysis,
+            PlaybackQualityPosition position)
+        {
+            var signals = new (string Name, double? Value)[]
+            {
+                ("position.seekLockWaitDurationMs", position.SeekLockWaitDurationMs),
+                ("position.seekExecutionDurationMs", position.SeekExecutionDurationMs),
+                ("position.seekQuiesceDurationMs", position.SeekQuiesceDurationMs),
+                ("position.seekReplayPreparationDurationMs", position.SeekReplayPreparationDurationMs),
+                ("position.seekStateResetDurationMs", position.SeekStateResetDurationMs),
+                ("position.seekMediaRepositionDurationMs", position.SeekMediaRepositionDurationMs),
+                ("position.seekDependentDecoderFlushDurationMs", position.SeekDependentDecoderFlushDurationMs),
+                ("position.seekPrerollRenderDurationMs", position.SeekPrerollRenderDurationMs),
+                ("position.seekWorkerRestartDurationMs", position.SeekWorkerRestartDurationMs)
+            };
+
+            foreach (var signal in signals)
+            {
+                if (signal.Value.HasValue)
+                {
+                    AddUnique(analysis.EvidenceSignals, signal.Name);
+                }
             }
         }
 

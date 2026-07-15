@@ -154,6 +154,11 @@ $report = [ordered]@{
         firstPresentedPositionTicks = 10000000; postSeekPositionTicks = 30000000
         postSeekAdvanced = $true; seekPositionErrorMs = 0.0
         seekOperationDurationMs = 120.0; seekRecoveryDurationMs = 150.0
+        seekLockWaitDurationMs = 1.0; seekExecutionDurationMs = 119.0
+        seekQuiesceDurationMs = 2.0; seekReplayPreparationDurationMs = 1.0
+        seekStateResetDurationMs = 2.0; seekMediaRepositionDurationMs = 100.0
+        seekDependentDecoderFlushDurationMs = 3.0; seekPrerollRenderDurationMs = 8.0
+        seekWorkerRestartDurationMs = 3.0
         seekPacketCacheEnabled = $false; seekPacketCacheHit = $false
         seekPacketCachePacketCount = 0; seekPacketCacheBytes = 0
         seekPacketCacheWindowDurationTicks = 0; seekFallbackReason = 'disabled'
@@ -197,7 +202,7 @@ $report = [ordered]@{
 
 $envelope = @{
     schemaVersion = 1
-    evaluationVersion = 'playback-quality-v0.20'
+    evaluationVersion = 'playback-quality-v0.21'
     caseMetadata = @{ caseId = $caseId; category = 'stable'; severity = 'high'; stability = 'stable' }
     report = $report
 }

@@ -1176,6 +1176,15 @@ function New-NativeHeadlessParserFixtureOutput {
         seekDemuxTargetTicks = '10000000'
         seekOperationDurationMs = '0'
         seekRecoveryDurationMs = '0'
+        seekLockWaitDurationMs = '0'
+        seekExecutionDurationMs = '0'
+        seekQuiesceDurationMs = '0'
+        seekReplayPreparationDurationMs = '0'
+        seekStateResetDurationMs = '0'
+        seekMediaRepositionDurationMs = '0'
+        seekDependentDecoderFlushDurationMs = '0'
+        seekPrerollRenderDurationMs = '0'
+        seekWorkerRestartDurationMs = '0'
         seekPacketCacheEnabled = '0'
         seekPacketCacheHit = '0'
         seekPacketCachePacketCount = '0'
@@ -2041,6 +2050,29 @@ function Assert-NativeHeadlessParserContracts {
             }
         }
     )
+
+    foreach ($field in @(
+        'seekLockWaitDurationMs',
+        'seekExecutionDurationMs',
+        'seekQuiesceDurationMs',
+        'seekReplayPreparationDurationMs',
+        'seekStateResetDurationMs',
+        'seekMediaRepositionDurationMs',
+        'seekDependentDecoderFlushDurationMs',
+        'seekPrerollRenderDurationMs',
+        'seekWorkerRestartDurationMs'
+    )) {
+        $negativeCases += [pscustomobject]@{
+            Name = 'completed-seek-without-' + ($field -creplace '([a-z0-9])([A-Z])', '$1-$2').ToLowerInvariant()
+            ExpectedField = $field
+            Output = New-NativeHeadlessParserFixtureOutput -Overrides @{
+                seekAttempted = '1'
+                seekStatus = 'completed'
+                seekActualPositionTicks = '10000000'
+                postSeekPlaybackPositionTicks = '20000000'
+            } -Omit @($field)
+        }
+    }
 
     $requiredTransportCallFields = @(
         'startupTransportProvider',

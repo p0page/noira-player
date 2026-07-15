@@ -141,7 +141,7 @@ public sealed class PlaybackQualityReportComposerTests
         var json = PlaybackQualityReportSerializer.Serialize(result);
 
         Assert.Contains("\"schemaVersion\": 1", json);
-        Assert.Contains("\"evaluationVersion\": \"playback-quality-v0.20\"", json);
+        Assert.Contains("\"evaluationVersion\": \"playback-quality-v0.21\"", json);
         Assert.Contains("\"report\"", json);
         Assert.Contains("\"modelAnalysis\"", json);
         Assert.Contains("\"caseMetadata\"", json);

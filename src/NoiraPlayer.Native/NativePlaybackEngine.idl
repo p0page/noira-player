@@ -152,6 +152,15 @@
         Int64 VideoStreamStartTimeTicks;
         Int64 SeekDemuxTargetTicks;
         Int64 FirstPresentedPositionTicks;
+        Double SeekLockWaitDurationMs;
+        Double SeekExecutionDurationMs;
+        Double SeekQuiesceDurationMs;
+        Double SeekReplayPreparationDurationMs;
+        Double SeekStateResetDurationMs;
+        Double SeekMediaRepositionDurationMs;
+        Double SeekDependentDecoderFlushDurationMs;
+        Double SeekPrerollRenderDurationMs;
+        Double SeekWorkerRestartDurationMs;
         Boolean SeekPacketCacheEnabled;
         Boolean SeekPacketCacheHit;
         UInt64 SeekPacketCachePacketCount;

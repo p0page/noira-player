@@ -248,6 +248,24 @@ namespace winrt::NoiraPlayer::Native::implementation
         void SeekDemuxTargetTicks(int64_t value) noexcept { m_seekDemuxTargetTicks = value; }
         int64_t FirstPresentedPositionTicks() const noexcept { return m_firstPresentedPositionTicks; }
         void FirstPresentedPositionTicks(int64_t value) noexcept { m_firstPresentedPositionTicks = value; }
+        double SeekLockWaitDurationMs() const noexcept { return m_seekLockWaitDurationMs; }
+        void SeekLockWaitDurationMs(double value) noexcept { m_seekLockWaitDurationMs = value; }
+        double SeekExecutionDurationMs() const noexcept { return m_seekExecutionDurationMs; }
+        void SeekExecutionDurationMs(double value) noexcept { m_seekExecutionDurationMs = value; }
+        double SeekQuiesceDurationMs() const noexcept { return m_seekQuiesceDurationMs; }
+        void SeekQuiesceDurationMs(double value) noexcept { m_seekQuiesceDurationMs = value; }
+        double SeekReplayPreparationDurationMs() const noexcept { return m_seekReplayPreparationDurationMs; }
+        void SeekReplayPreparationDurationMs(double value) noexcept { m_seekReplayPreparationDurationMs = value; }
+        double SeekStateResetDurationMs() const noexcept { return m_seekStateResetDurationMs; }
+        void SeekStateResetDurationMs(double value) noexcept { m_seekStateResetDurationMs = value; }
+        double SeekMediaRepositionDurationMs() const noexcept { return m_seekMediaRepositionDurationMs; }
+        void SeekMediaRepositionDurationMs(double value) noexcept { m_seekMediaRepositionDurationMs = value; }
+        double SeekDependentDecoderFlushDurationMs() const noexcept { return m_seekDependentDecoderFlushDurationMs; }
+        void SeekDependentDecoderFlushDurationMs(double value) noexcept { m_seekDependentDecoderFlushDurationMs = value; }
+        double SeekPrerollRenderDurationMs() const noexcept { return m_seekPrerollRenderDurationMs; }
+        void SeekPrerollRenderDurationMs(double value) noexcept { m_seekPrerollRenderDurationMs = value; }
+        double SeekWorkerRestartDurationMs() const noexcept { return m_seekWorkerRestartDurationMs; }
+        void SeekWorkerRestartDurationMs(double value) noexcept { m_seekWorkerRestartDurationMs = value; }
         bool SeekPacketCacheEnabled() const noexcept { return m_seekPacketCacheEnabled; }
         void SeekPacketCacheEnabled(bool value) noexcept { m_seekPacketCacheEnabled = value; }
         bool SeekPacketCacheHit() const noexcept { return m_seekPacketCacheHit; }
@@ -710,6 +728,15 @@ namespace winrt::NoiraPlayer::Native::implementation
         int64_t m_videoStreamStartTimeTicks{0};
         int64_t m_seekDemuxTargetTicks{-1};
         int64_t m_firstPresentedPositionTicks{-1};
+        double m_seekLockWaitDurationMs{0.0};
+        double m_seekExecutionDurationMs{0.0};
+        double m_seekQuiesceDurationMs{0.0};
+        double m_seekReplayPreparationDurationMs{0.0};
+        double m_seekStateResetDurationMs{0.0};
+        double m_seekMediaRepositionDurationMs{0.0};
+        double m_seekDependentDecoderFlushDurationMs{0.0};
+        double m_seekPrerollRenderDurationMs{0.0};
+        double m_seekWorkerRestartDurationMs{0.0};
         bool m_seekPacketCacheEnabled{false};
         bool m_seekPacketCacheHit{false};
         uint64_t m_seekPacketCachePacketCount{0};

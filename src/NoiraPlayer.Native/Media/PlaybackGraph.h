@@ -74,6 +74,19 @@ namespace winrt::NoiraPlayer::Native::implementation
         int64_t PacketCacheWindowDurationTicks{0};
     };
 
+    struct PlaybackGraphSeekTiming
+    {
+        double LockWaitDurationMs{0.0};
+        double ExecutionDurationMs{0.0};
+        double QuiesceDurationMs{0.0};
+        double ReplayPreparationDurationMs{0.0};
+        double StateResetDurationMs{0.0};
+        double MediaRepositionDurationMs{0.0};
+        double DependentDecoderFlushDurationMs{0.0};
+        double PrerollRenderDurationMs{0.0};
+        double WorkerRestartDurationMs{0.0};
+    };
+
     inline HdrOutputDecision ResolveHdrOutputDecisionForFrame(
         bool hasSeenVideoFrameColor,
         bool previousDesiredHdrOutput,
@@ -113,6 +126,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         std::vector<FfmpegStreamSnapshot> SourceTrackSnapshots() const;
         FfmpegTimelineSnapshot TimelineSnapshot() const;
         FfmpegSeekReplayAttemptSnapshot LastSeekReplaySnapshot() const;
+        PlaybackGraphSeekTiming LastSeekTimingSnapshot() const;
 
     private:
         void StartRenderLoop();
@@ -160,6 +174,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         bool m_open{false};
         bool m_switchPacketCacheEnabled{false};
         FfmpegSeekReplayAttemptSnapshot m_lastSeekReplaySnapshot;
+        PlaybackGraphSeekTiming m_lastSeekTimingSnapshot;
         bool m_paused{false};
         bool m_stopRenderLoop{false};
         uint64_t m_renderPassCount{0};

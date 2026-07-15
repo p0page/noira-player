@@ -1550,3 +1550,10 @@ baseline 必须在 materialize 前检查 runner summary 的版本、缺失报告
 决策：运行编排合同升级为 `native-manifest-runner-v0.4`。runner 必须在真实播放前按 `itemId + mediaSourceId` 对选中 case 的 Emby 源去重并预解析；同源 case 只复用当前进程内的解析结果，不能反复认证和请求 PlaybackInfo。缓存不得持久化 direct-stream URL、访问令牌或可逆 key；summary 只保存唯一源计数、成功计数、命中计数、每个 case 的原始解析尝试数和缓存命中布尔值。
 
 原因：manifest case 表达的是不同播放场景，不代表每个场景都需要重新发现同一媒体源。长基线中重复外部 API 请求会扩大环境故障面，也让后段 case 与前段 case 的源身份获取条件不一致。预解析失败仍必须让所有依赖该源的 case 输出 orchestration error 并阻断 baseline；缓存只减少重复编排工作，不改变 native attempt 身份、播放器结果、评价阈值或对正常机器/网络方差的重复测量要求。
+# 2026-07-15: seek 调优必须先有阶段归因证据
+
+决策：evaluation version 升级为 `playback-quality-v0.21`。正式 timeline/seek case 必须同时记录 seek 调用返回、首帧恢复，以及锁等待、worker 静默、replay 判定、状态重置、媒体重定位、依赖解码器清理、首帧预卷和 worker 重启耗时。这些字段必须从真实 `PlaybackGraph::Seek` 执行生成，并贯通 native-headless、WinRT 和 App-hosted 报告；manifest expected、总耗时差值或合成数据不得补齐实际阶段。
+
+原因：旧报告只能证明 seek 很慢，不能判断耗时来自网络 `av_seek_frame`、graph 争用、解码器清理还是 worker 生命周期。正常机器和网络抖动会保留在同 manifest 重复分布中，阶段证据用于归因而不是删除异常值。评测器版本变化后必须重新建立 v0.21 baseline，不能与 v0.20 静默比较。
+
+进度条问题不整体归入 Core。Core 对逻辑 timeline、实际 seek、首帧落点和后续推进负责；App 对所选源 duration、进度条比例和实际位置呈现负责。只有 v0.21 证据证明 native timeline 或 seek 失败时才调整 Core；App 映射问题应以 App-hosted case 独立修复，避免把界面错误优化进解码链路。
