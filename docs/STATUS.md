@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-15 更新：真实 App 时长与 seek 恢复证据闭环
+
+进度条和拖动问题的时长来源已修正。播放器现在优先使用 native demux 实际观测到的逻辑时长，其次使用当前所选媒体源的 `RunTimeTicks`，最后才回退到 item metadata；切换媒体源和播放进度 tick 都会刷新该值。direct URI 不再因服务端时长为零而把 slider 最大值缩成当前位置。native duration getter 已移入 `PlaybackGraph` 生命周期锁内，媒体关闭后返回 0；首轮完整 App 复核发现 Stop 后的进度 timer 曾访问已关闭 FFmpeg stream 并触发未捕获异常，该问题已由停止态回归契约锁定。
+
+App-hosted timeline 的 seek 恢复耗时不再依赖 250ms UI 轮询是否刚好看到首帧。`SeekPresentationTracker` 现在从 native seek 开始计时，到当前 generation 的第一个成功 present 结束，并将恢复时长经过 native snapshot、IDL/WinRT、Core snapshot 和 App 冻结证据完整传入 report。确定性 C++ 测试用注入时钟验证 375ms/125ms，避免 `Sleep` 和机器抖动。复核同时发现 App 的手写 metrics clone 曾静默漏掉新字段；跨层契约现同时检查 WinRT 映射、最终 timeline enrichment 和冻结 clone。
+
+公开 `jellyfin/hdr10-http-timeline-10s` 已从完整 Debug x64 Native AOT App 真实运行并通过严格 report-set：`structureValid=true`、`executionValid=true`、`1/1 matched`。实际时长为 `299500000 ticks`；目标、demux 目标、实际落点和首帧位置均为 `100000000 ticks`，误差 `0ms`，seek 调用约 `233.77ms`，首帧恢复约 `1358.65ms`，后续继续推进。该报告仍诚实为 fail，因为 10 秒墙钟内受公共网络 transport wait 影响，媒体窗口只覆盖约 1 秒；没有放宽阈值或把环境抖动改成 pass。
+
+验证：`run-playback-core-checks.ps1 -AppDiffBase main` 的 38 个阶段全部通过，含 728 项定向 Core 测试、约 380 秒真实 native corpus、30 秒暂停恢复、demux I/O 恢复、EAGAIN、HTTP seek、轨道字幕、颜色/DXGI、DX offscreen 和 Native x64 build。完整 App Debug x64 Build 与 Native AOT Publish 均成功。该阶段修复了时长/seek 证据链和真实进度映射，不宣称公共网络吞吐或全部 Emby 片源的 seek 性能已改善。
+
 ## 2026-07-15 更新：远程 seek 不再同步等待首个解码帧
 
 v0.21 阶段证据在公开 Jellyfin HDR10/HEVC HTTP timeline case 上定位到：旧 `PlaybackGraph::Seek` 的媒体重定位仅约 `0.02-0.06ms`，但 mutation 后的 decode worker restart 会同步等待队列首帧，令 seek 调用随网络抖动阻塞约 `0.9-4.7s`。缓存命中时同一路径稳定在约 `15ms`，进一步排除了 graph 锁和 `av_seek_frame` 本身。Kodi、VLC 和 mpv 都把 seek 交给播放器/input/demux 工作线程处理，调用方不以首个解码帧作为命令返回条件。

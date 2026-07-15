@@ -146,6 +146,11 @@ namespace winrt::NoiraPlayer::Native::implementation
         return m_graph ? m_graph->CurrentPositionTicks() : m_positionTicks;
     }
 
+    int64_t NativePlaybackEngine::DurationTicks() const
+    {
+        return m_graph ? m_graph->DurationTicks() : 0;
+    }
+
     NoiraPlayer::Native::NativePlaybackStatus NativePlaybackEngine::DisplayStatus() const
     {
         auto status = winrt::make<NativePlaybackStatus>();
@@ -283,6 +288,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         metrics.VideoStreamStartTimeTicks(snapshot.VideoStreamStartTimeTicks);
         metrics.SeekDemuxTargetTicks(snapshot.SeekDemuxTargetTicks);
         metrics.FirstPresentedPositionTicks(snapshot.FirstPresentedPositionTicks);
+        metrics.SeekRecoveryDurationMs(snapshot.SeekRecoveryDurationMs);
         auto seekTiming = m_graph->LastSeekTimingSnapshot();
         metrics.SeekLockWaitDurationMs(seekTiming.LockWaitDurationMs);
         metrics.SeekExecutionDurationMs(seekTiming.ExecutionDurationMs);

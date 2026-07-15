@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-15：timeline 时长与 seek 恢复必须来自播放器实际状态
+
+决策：UI timeline 的时长按 native demux 观测值、当前所选媒体源、item metadata 的顺序解析。native getter 只能通过持有 graph 生命周期锁的非抛出接口读取；媒体未打开或已经停止时返回 0，不得直接访问已关闭的 FFmpeg stream。切换媒体源后必须重新解析时长，direct URI 不得用当前 position 扩张 slider max 来冒充真实 duration。
+
+seek 恢复时长由 native `SeekPresentationTracker` 从 seek 发起到当前 generation 的第一个成功 present 计量。App 可以短轮询以改善即时交互，但正式 report 不依赖轮询窗口，也不得在超时后把等待时长伪装成已恢复。落点、调用返回耗时和首帧恢复耗时继续作为三个独立信号。
+
+证据桥接决策：新增 playback metric 时，IDL/WinRT/Core 映射和 App 捕获阶段的冻结 clone 都属于强制契约。native 已观测但在手写 clone 中丢失的字段归类为 eval harness bug，不得归类为 player failure。`SystemMediaPlaybackBackend.cs` 作为 `IPlaybackBackend` 的 duration 适配器被精确加入 App diff guard allowlist；XAML、项目、manifest/package 和其他 App 文件仍被阻断。
+
+验证边界：代表性 App-hosted case 必须先通过完整 App Build/Publish 和严格一对一 report-set，再解释质量结果。结构有效只证明执行与证据完整，不会覆盖 transport wait、窗口不足或其他真实 fail。普通机器和网络抖动保留在重复分布中。
+
 ## 2026-07-15：正式 baseline 的 manifest 必须等于实际执行集合
 
 决策：统一 baseline 最终只能合并筛选后的 executed Core manifest 与本轮真实 native manifest。完整语料或审计 manifest 可以保留 quarantine、未选择或当前环境不可执行的 case，但这些 case 不得进入本轮最终 manifest，也不得由 expected、probe 或缺失报告补位。最终 manifest、runner attempt 和 report 必须逐 case 一一对应。

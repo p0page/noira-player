@@ -9,6 +9,40 @@ namespace NoiraPlayer.Core.Tests.Playback;
 public sealed class PlaybackOrchestratorTests
 {
     [Fact]
+    public async Task CurrentDurationTicks_Prefers_Native_Observed_Duration()
+    {
+        var backend = new RecordingPlaybackBackend
+        {
+            DurationTicks = 120_000_000
+        };
+        var source = Source("source-1");
+        source.RunTimeTicks = 90_000_000;
+        var orchestrator = new PlaybackOrchestrator(backend);
+
+        await orchestrator.StartAsync("item-1", new[] { source }, 0);
+
+        Assert.Equal(120_000_000, ReadCurrentDurationTicks(orchestrator));
+    }
+
+    [Fact]
+    public async Task CurrentDurationTicks_Falls_Back_To_Selected_MediaSource_And_Changes_With_Source()
+    {
+        var backend = new RecordingPlaybackBackend();
+        var firstSource = Source("source-1");
+        firstSource.RunTimeTicks = 90_000_000;
+        var secondSource = Source("source-2");
+        secondSource.RunTimeTicks = 180_000_000;
+        var orchestrator = new PlaybackOrchestrator(backend);
+
+        await orchestrator.StartAsync("item-1", new[] { firstSource, secondSource }, 0);
+        Assert.Equal(90_000_000, ReadCurrentDurationTicks(orchestrator));
+
+        await orchestrator.SwitchMediaSourceAsync("source-2");
+
+        Assert.Equal(180_000_000, ReadCurrentDurationTicks(orchestrator));
+    }
+
+    [Fact]
     public async Task StartAsync_Uses_First_MediaSource_With_Resume_Position()
     {
         var backend = new RecordingPlaybackBackend();
@@ -524,10 +558,18 @@ public sealed class PlaybackOrchestratorTests
         Kind = kind
     };
 
+    private static long ReadCurrentDurationTicks(PlaybackOrchestrator orchestrator)
+    {
+        var property = typeof(PlaybackOrchestrator).GetProperty("CurrentDurationTicks");
+        Assert.NotNull(property);
+        return Assert.IsType<long>(property.GetValue(orchestrator));
+    }
+
     private sealed class RecordingPlaybackBackend : IPlaybackBackend
     {
         public PlaybackDescriptor? LastDescriptor { get; private set; }
         public long CurrentPositionTicks { get; set; }
+        public long DurationTicks { get; set; }
         public int StartCount { get; private set; }
         public bool FailNextStart { get; set; }
         public PlaybackState? StateToRaiseDuringStart { get; set; }
@@ -575,6 +617,7 @@ public sealed class PlaybackOrchestratorTests
     {
         public PlaybackDescriptor? LastDescriptor { get; private set; }
         public long CurrentPositionTicks { get; set; }
+        public long DurationTicks { get; set; }
         public int StartCount { get; private set; }
         public int? LastSwitchedAudioStreamIndex { get; private set; }
         public int? LastSwitchedSubtitleStreamIndex { get; private set; }

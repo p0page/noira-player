@@ -30,6 +30,11 @@ namespace NoiraPlayer.Core.Playback
 
         public PlaybackDescriptor? CurrentDescriptor { get; private set; }
 
+        public long CurrentDurationTicks => PlaybackTimelineDurationPolicy.Resolve(
+            _backend.DurationTicks,
+            CurrentMediaSource?.RunTimeTicks ?? 0,
+            0);
+
         public event EventHandler<PlaybackStateChangedEventArgs>? StateChanged;
 
         public async Task StartAsync(

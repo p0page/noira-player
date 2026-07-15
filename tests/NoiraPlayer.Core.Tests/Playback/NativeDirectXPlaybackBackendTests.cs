@@ -166,6 +166,8 @@ public sealed class NativeDirectXPlaybackBackendTests
     {
         public NativePlaybackOpenRequest? LastRequest { get; private set; }
         public long CurrentPositionTicks { get; set; }
+
+        public long DurationTicks { get; set; }
         public int? LastSwitchedAudioStreamIndex { get; private set; }
         public int? LastSwitchedSubtitleStreamIndex { get; private set; }
         public int SubtitleSwitchCount { get; private set; }

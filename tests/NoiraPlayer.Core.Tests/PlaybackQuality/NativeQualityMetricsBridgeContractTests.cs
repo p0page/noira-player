@@ -460,6 +460,7 @@ public sealed class NativeQualityMetricsBridgeContractTests
         "VideoStreamStartTimeTicks",
         "SeekDemuxTargetTicks",
         "FirstPresentedPositionTicks",
+        "SeekRecoveryDurationMs",
         "SeekPacketCacheEnabled",
         "SeekLockWaitDurationMs",
         "SeekExecutionDurationMs",

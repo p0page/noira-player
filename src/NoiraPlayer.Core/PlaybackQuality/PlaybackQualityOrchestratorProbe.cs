@@ -588,6 +588,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
             public long CurrentPositionTicks { get; private set; }
 
+            public long DurationTicks => 0;
+
             public PlaybackBackendCapabilities Capabilities { get; } =
                 new PlaybackBackendCapabilities(
                     PlaybackBackendFeature.DirectPlayHttp |

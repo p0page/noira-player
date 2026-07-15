@@ -9,6 +9,8 @@ namespace NoiraPlayer.Core.Playback
 
         long CurrentPositionTicks { get; }
 
+        long DurationTicks { get; }
+
         Task StartAsync(PlaybackDescriptor descriptor);
 
         Task PauseAsync();

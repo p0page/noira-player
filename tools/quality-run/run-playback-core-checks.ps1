@@ -13,6 +13,7 @@ $nativeHttpMediaInputScriptPath = Join-Path $PSScriptRoot 'run-http-media-input-
 $nativeSeekReplayCacheScriptPath = Join-Path $PSScriptRoot 'run-ffmpeg-seek-replay-cache-test.ps1'
 $protectedAppRoots = @('src/NoiraPlayer.App')
 $allowedAppInstrumentationPaths = @(
+    'src/NoiraPlayer.App/Playback/SystemMediaPlaybackBackend.cs',
     'src/NoiraPlayer.App/Playback/WinRtNativePlaybackEngine.cs',
     'src/NoiraPlayer.App/Navigation/PlaybackLaunchRequest.cs',
     'src/NoiraPlayer.App/MainPage.xaml.cs',

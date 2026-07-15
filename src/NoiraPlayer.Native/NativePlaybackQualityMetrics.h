@@ -248,6 +248,8 @@ namespace winrt::NoiraPlayer::Native::implementation
         void SeekDemuxTargetTicks(int64_t value) noexcept { m_seekDemuxTargetTicks = value; }
         int64_t FirstPresentedPositionTicks() const noexcept { return m_firstPresentedPositionTicks; }
         void FirstPresentedPositionTicks(int64_t value) noexcept { m_firstPresentedPositionTicks = value; }
+        double SeekRecoveryDurationMs() const noexcept { return m_seekRecoveryDurationMs; }
+        void SeekRecoveryDurationMs(double value) noexcept { m_seekRecoveryDurationMs = value; }
         double SeekLockWaitDurationMs() const noexcept { return m_seekLockWaitDurationMs; }
         void SeekLockWaitDurationMs(double value) noexcept { m_seekLockWaitDurationMs = value; }
         double SeekExecutionDurationMs() const noexcept { return m_seekExecutionDurationMs; }
@@ -728,6 +730,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         int64_t m_videoStreamStartTimeTicks{0};
         int64_t m_seekDemuxTargetTicks{-1};
         int64_t m_firstPresentedPositionTicks{-1};
+        double m_seekRecoveryDurationMs{-1.0};
         double m_seekLockWaitDurationMs{0.0};
         double m_seekExecutionDurationMs{0.0};
         double m_seekQuiesceDurationMs{0.0};

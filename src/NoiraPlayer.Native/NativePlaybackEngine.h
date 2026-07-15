@@ -20,6 +20,7 @@ namespace winrt::NoiraPlayer::Native::implementation
 
         void AttachSurface(winrt::Windows::UI::Xaml::Controls::SwapChainPanel const& panel);
         int64_t CurrentPositionTicks() const;
+        int64_t DurationTicks() const;
         NoiraPlayer::Native::NativePlaybackStatus DisplayStatus() const;
         NoiraPlayer::Native::NativePlaybackQualityMetrics QualityMetrics() const;
 

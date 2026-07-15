@@ -373,7 +373,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         m_positionSnapshotTicks.store(positionTicks, std::memory_order_relaxed);
         m_pendingVideoFrame.reset();
         ResetRuntimeStats(true);
-        m_seekPresentationTracker.BeginSeek(m_renderedVideoFrameCount);
+        m_seekPresentationTracker.BeginSeek(m_renderedVideoFrameCount, lockStartedAt);
         ApplyFramePacingPolicyMetrics();
         m_audioRenderer.Flush();
         timing.StateResetDurationMs = std::chrono::duration<double, std::milli>(
@@ -648,6 +648,26 @@ namespace winrt::NoiraPlayer::Native::implementation
     int64_t PlaybackGraph::CurrentPositionTicks() const noexcept
     {
         return m_positionSnapshotTicks.load(std::memory_order_relaxed);
+    }
+
+    int64_t PlaybackGraph::DurationTicks() const noexcept
+    {
+        std::lock_guard lock(m_graphMutex);
+        if (!m_open)
+        {
+            return 0;
+        }
+
+        try
+        {
+            auto video = m_mediaSource.BestVideoStreamSnapshot();
+            auto timeline = m_mediaSource.TimelineSnapshot(video ? video->StreamIndex : -1);
+            return (std::max<int64_t>)(0, timeline.LogicalDurationTicks);
+        }
+        catch (...)
+        {
+            return 0;
+        }
     }
 
     uint64_t PlaybackGraph::SubtitleCueRenderCount() const noexcept
@@ -1306,10 +1326,13 @@ namespace winrt::NoiraPlayer::Native::implementation
                 m_seekPresentationTracker.RecordPresentedFrame(
                     m_seekPresentationTracker.CurrentGeneration(),
                     m_renderedVideoFrameCount,
-                    frame.PositionTicks);
+                    frame.PositionTicks,
+                    renderedAt);
                 auto seekPresentation = m_seekPresentationTracker.Snapshot();
                 m_qualityMetrics.FirstPresentedPositionTicks =
                     seekPresentation.ActualPositionTicks.value_or(-1);
+                m_qualityMetrics.SeekRecoveryDurationMs =
+                    seekPresentation.RecoveryDurationMs.value_or(-1.0);
             }
 
             m_pendingVideoFrame.reset();

@@ -28,6 +28,8 @@ namespace NoiraPlayer.App.Playback
 
         public long CurrentPositionTicks => _engine.CurrentPositionTicks();
 
+        public long DurationTicks => _engine.DurationTicks();
+
         public PlaybackBackendCapabilities Capabilities { get; } =
             new PlaybackBackendCapabilities(
                 PlaybackBackendFeature.DirectPlayHttp |
@@ -189,6 +191,7 @@ namespace NoiraPlayer.App.Playback
                     VideoStreamStartTimeTicks = nativeMetrics.VideoStreamStartTimeTicks,
                     SeekDemuxTargetTicks = nativeMetrics.SeekDemuxTargetTicks,
                     FirstPresentedPositionTicks = nativeMetrics.FirstPresentedPositionTicks >= 0 ? nativeMetrics.FirstPresentedPositionTicks : (long?)null,
+                    SeekRecoveryDurationMs = nativeMetrics.SeekRecoveryDurationMs >= 0 ? nativeMetrics.SeekRecoveryDurationMs : (double?)null,
                     SeekLockWaitDurationMs = nativeMetrics.SeekLockWaitDurationMs,
                     SeekExecutionDurationMs = nativeMetrics.SeekExecutionDurationMs,
                     SeekQuiesceDurationMs = nativeMetrics.SeekQuiesceDurationMs,

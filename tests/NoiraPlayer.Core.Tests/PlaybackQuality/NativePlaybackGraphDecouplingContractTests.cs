@@ -103,8 +103,9 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         var helperSource = File.ReadAllText(Path.Combine(root, "tests", "NoiraPlayer.Native.Tests", "NativePlaybackGraphHeadlessSmokeTests.cpp"));
 
         Assert.Contains("SeekPresentationSnapshot SeekPresentationSnapshot() const noexcept;", graphHeader, StringComparison.Ordinal);
-        Assert.Contains("m_seekPresentationTracker.BeginSeek(m_renderedVideoFrameCount)", graphSource, StringComparison.Ordinal);
+        Assert.Contains("m_seekPresentationTracker.BeginSeek(m_renderedVideoFrameCount, lockStartedAt)", graphSource, StringComparison.Ordinal);
         Assert.Contains("m_seekPresentationTracker.RecordPresentedFrame(", graphSource, StringComparison.Ordinal);
+        Assert.Contains("m_qualityMetrics.SeekRecoveryDurationMs", graphSource, StringComparison.Ordinal);
         Assert.Contains("graph.SeekPresentationSnapshot()", helperSource, StringComparison.Ordinal);
         Assert.DoesNotContain("seek.ActualPositionTicks = graph.QualityMetricsSnapshot().VideoPositionTicks;", helperSource, StringComparison.Ordinal);
     }

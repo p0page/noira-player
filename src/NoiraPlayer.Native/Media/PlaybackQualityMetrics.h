@@ -115,6 +115,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         int64_t VideoStreamStartTimeTicks{0};
         int64_t SeekDemuxTargetTicks{-1};
         int64_t FirstPresentedPositionTicks{-1};
+        double SeekRecoveryDurationMs{-1.0};
         double RenderIntervalMsP50{0.0};
         double RenderIntervalMsP05{0.0};
         double RenderIntervalMsP95{0.0};
@@ -410,6 +411,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         int64_t VideoStreamStartTimeTicks{0};
         int64_t SeekDemuxTargetTicks{-1};
         int64_t FirstPresentedPositionTicks{-1};
+        double SeekRecoveryDurationMs{-1.0};
         double FramePacingSourceFrameRate{0.0};
         double LateFrameDropToleranceMs{0.0};
 
@@ -661,6 +663,7 @@ namespace winrt::NoiraPlayer::Native::implementation
             snapshot.VideoStreamStartTimeTicks = VideoStreamStartTimeTicks;
             snapshot.SeekDemuxTargetTicks = SeekDemuxTargetTicks;
             snapshot.FirstPresentedPositionTicks = FirstPresentedPositionTicks;
+            snapshot.SeekRecoveryDurationMs = SeekRecoveryDurationMs;
             snapshot.RenderIntervalMsP05 = m_renderIntervals.Percentile(5);
             snapshot.RenderIntervalMsP50 = m_renderIntervals.Percentile(50);
             snapshot.RenderIntervalMsP95 = m_renderIntervals.Percentile(95);

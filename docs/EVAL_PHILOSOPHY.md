@@ -2,6 +2,12 @@
 
 评测体系的第一职责是诚实暴露事实，不是让当前播放器显得更好。
 
+## 2026-07-15 状态与冻结证据原则
+
+播放器位置、时长和 seek 恢复必须来自实际 demux、graph 和 present 状态。服务端 metadata 只能作为播放器尚未观测到时的回退；媒体关闭后的只读 getter 不得访问失效解码状态或让 UI timer 崩溃。
+
+任何新增 telemetry 都必须逐层验证 native snapshot、IDL/WinRT、Core model、App 映射和最终冻结 snapshot。手写 clone 是独立证据边界；native 已有值但 clone 漏字段属于 eval harness bug。固定轮询窗口没有看到事件，只能表示轮询未观测到，不能证明事件没有发生；正式恢复耗时应由事件发生处计量。
+
 ## 2026-07-15 seek 阶段证据原则
 
 seek 调用耗时、首帧恢复耗时和落点误差回答的是不同问题，不能相互替代。对于正式 timeline/seek case，总调用还必须拆为锁等待、worker 静默、replay 判定、状态重置、媒体重定位、依赖解码器清理、首帧预卷和 worker 重启阶段。阶段数据来自真实播放执行；缺失阶段属于证据不足，不能用总耗时、manifest expected 或相邻运行推算。

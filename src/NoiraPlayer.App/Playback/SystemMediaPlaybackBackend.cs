@@ -36,6 +36,8 @@ namespace NoiraPlayer.App.Playback
 
         public long CurrentPositionTicks => _player.PlaybackSession.Position.Ticks;
 
+        public long DurationTicks => _player.PlaybackSession.NaturalDuration.Ticks;
+
         public Task StartAsync(PlaybackDescriptor descriptor)
         {
             ThrowIfDisposed();

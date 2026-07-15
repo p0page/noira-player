@@ -152,6 +152,7 @@
         Int64 VideoStreamStartTimeTicks;
         Int64 SeekDemuxTargetTicks;
         Int64 FirstPresentedPositionTicks;
+        Double SeekRecoveryDurationMs;
         Double SeekLockWaitDurationMs;
         Double SeekExecutionDurationMs;
         Double SeekQuiesceDurationMs;
@@ -312,6 +313,7 @@
         event NativePlaybackStateChangedHandler StateChanged;
         void AttachSurface(Windows.UI.Xaml.Controls.SwapChainPanel panel);
         Int64 CurrentPositionTicks();
+        Int64 DurationTicks();
         NativePlaybackStatus DisplayStatus();
         NativePlaybackQualityMetrics QualityMetrics();
         Windows.Foundation.IAsyncAction OpenAsync(NativePlaybackOpenRequest request);

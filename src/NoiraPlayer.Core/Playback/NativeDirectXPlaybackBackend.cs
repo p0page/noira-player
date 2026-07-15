@@ -23,6 +23,8 @@ namespace NoiraPlayer.Core.Playback
 
         public long CurrentPositionTicks => _engine.CurrentPositionTicks;
 
+        public long DurationTicks => _engine.DurationTicks;
+
         public PlaybackBackendCapabilities Capabilities => _engine.Capabilities;
 
         public PlaybackDisplayStatus DisplayStatus => _engine.DisplayStatus;

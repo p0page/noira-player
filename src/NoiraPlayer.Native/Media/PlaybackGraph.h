@@ -116,6 +116,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         PlaybackGraphSwitchTiming SwitchAudioStream(int32_t audioStreamIndex);
         PlaybackGraphSwitchTiming SwitchSubtitleStream(std::optional<int32_t> subtitleStreamIndex);
         int64_t CurrentPositionTicks() const noexcept;
+        int64_t DurationTicks() const noexcept;
         uint64_t SubtitleCueRenderCount() const noexcept;
         uint64_t SubtitleDecodedCueCount() const noexcept;
         std::optional<int32_t> SelectedAudioStreamIndex() const noexcept;

@@ -55,6 +55,7 @@ namespace NoiraPlayer.App.Views
         private string _currentItemName = "";
         private long _lastPositionTicks;
         private long _durationTicks;
+        private long _fallbackDurationTicks;
         private bool _hasPlaybackContext;
         private bool _infoVisible;
         private bool _reportInProgress;
@@ -1115,8 +1116,10 @@ namespace NoiraPlayer.App.Views
             await RunPlaybackCommandAsync(async () =>
             {
                 await _orchestrator.SwitchMediaSourceAsync(option.Id);
+                RefreshTimelineDuration();
                 await ReportProgressAsync(PlaybackProgressEvent.QualityChange);
                 UpdateStreamControls();
+                UpdateProgressSlider();
             });
         }
 
@@ -1195,7 +1198,8 @@ namespace NoiraPlayer.App.Views
             var source = CreateManualSource();
             await _orchestrator.StartAsync(DemoItemId, new[] { source }, 0);
             _lastPositionTicks = 0;
-            _durationTicks = 0;
+            _fallbackDurationTicks = 0;
+            RefreshTimelineDuration();
             _hasPlaybackContext = _orchestrator.CurrentDescriptor != null;
             _lastPlaybackSessionRequest = null;
             _playbackStoppedReported = false;
@@ -1234,7 +1238,8 @@ namespace NoiraPlayer.App.Views
             }
 
             _currentItemName = request.ItemName;
-            _durationTicks = request.RuntimeTicks;
+            _fallbackDurationTicks = request.RuntimeTicks;
+            _durationTicks = PlaybackTimelineDurationPolicy.Resolve(0, 0, _fallbackDurationTicks);
             NowPlayingBlock.Text = string.IsNullOrWhiteSpace(_currentItemName)
                 ? request.ItemId
                 : _currentItemName;
@@ -1350,6 +1355,7 @@ namespace NoiraPlayer.App.Views
                 nativeOpenStartedAtUtc);
 #endif
             await _orchestrator.StartAsync(request.ItemId, sources, request.StartPositionTicks, request.MediaSourceId);
+            RefreshTimelineDuration();
 #if DEBUG
             var playbackStartedAtUtc = DateTimeOffset.UtcNow;
             AddQualityRunStartupStage(
@@ -1395,7 +1401,8 @@ namespace NoiraPlayer.App.Views
             _currentItemName = string.IsNullOrWhiteSpace(request.ItemName)
                 ? GetLaunchRequestDisplayName(request)
                 : request.ItemName;
-            _durationTicks = request.RuntimeTicks;
+            _fallbackDurationTicks = request.RuntimeTicks;
+            _durationTicks = PlaybackTimelineDurationPolicy.Resolve(0, 0, _fallbackDurationTicks);
             _lastPlaybackSessionRequest = null;
             NowPlayingBlock.Text = _currentItemName;
             ManualDebugPanel.Visibility = Visibility.Collapsed;
@@ -1436,6 +1443,7 @@ namespace NoiraPlayer.App.Views
                 new[] { source },
                 request.StartPositionTicks,
                 source.Id);
+            RefreshTimelineDuration();
 #if DEBUG
             var playbackStartedAtUtc = DateTimeOffset.UtcNow;
             AddQualityRunStartupStage(
@@ -2137,6 +2145,10 @@ namespace NoiraPlayer.App.Views
 
             position.SeekDemuxTargetTicks = metrics.SeekDemuxTargetTicks;
             position.FirstPresentedPositionTicks = metrics.FirstPresentedPositionTicks;
+            if (metrics.SeekRecoveryDurationMs.HasValue)
+            {
+                position.SeekRecoveryDurationMs = metrics.SeekRecoveryDurationMs;
+            }
             position.SeekLockWaitDurationMs = metrics.SeekLockWaitDurationMs;
             position.SeekExecutionDurationMs = metrics.SeekExecutionDurationMs;
             position.SeekQuiesceDurationMs = metrics.SeekQuiesceDurationMs;
@@ -2441,6 +2453,7 @@ namespace NoiraPlayer.App.Views
                     VideoStreamStartTimeTicks = source.VideoStreamStartTimeTicks,
                     SeekDemuxTargetTicks = source.SeekDemuxTargetTicks,
                     FirstPresentedPositionTicks = source.FirstPresentedPositionTicks,
+                    SeekRecoveryDurationMs = source.SeekRecoveryDurationMs,
                     SeekLockWaitDurationMs = source.SeekLockWaitDurationMs,
                     SeekExecutionDurationMs = source.SeekExecutionDurationMs,
                     SeekQuiesceDurationMs = source.SeekQuiesceDurationMs,
@@ -2838,6 +2851,7 @@ namespace NoiraPlayer.App.Views
             _progressTimer.Stop();
             _lastPositionTicks = 0;
             _durationTicks = 0;
+            _fallbackDurationTicks = 0;
             _hasPlaybackContext = false;
             _lastPlaybackSessionRequest = null;
             UpdateStatus(CorePlaybackState.Stopped);
@@ -3182,6 +3196,7 @@ namespace NoiraPlayer.App.Views
         private async void ProgressTimer_OnTick(object? sender, object e)
         {
             await ReportProgressAsync(PlaybackProgressEvent.TimeUpdate);
+            RefreshTimelineDuration();
             UpdateProgressSlider();
         }
 
@@ -3894,6 +3909,21 @@ namespace NoiraPlayer.App.Views
                 state != CorePlaybackState.Stopped &&
                 state != CorePlaybackState.Failed &&
                 state != CorePlaybackState.Opening;
+        }
+
+        private void RefreshTimelineDuration()
+        {
+            var source = _orchestrator.CurrentMediaSource;
+            var observedDurationTicks = _orchestrator.CurrentDurationTicks;
+            _durationTicks = PlaybackTimelineDurationPolicy.Resolve(
+                observedDurationTicks,
+                0,
+                _fallbackDurationTicks);
+
+            if (source != null && observedDurationTicks > 0)
+            {
+                source.RunTimeTicks = observedDurationTicks;
+            }
         }
 
         private void ShowPlaybackNotReady()

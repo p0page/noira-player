@@ -103,6 +103,7 @@ if (-not ($plan.appDiffGuard.protectedRoots -contains 'src/NoiraPlayer.App')) {
 }
 
 $expectedAllowedAppInstrumentationPaths = @(
+    'src/NoiraPlayer.App/Playback/SystemMediaPlaybackBackend.cs',
     'src/NoiraPlayer.App/Playback/WinRtNativePlaybackEngine.cs',
     'src/NoiraPlayer.App/Navigation/PlaybackLaunchRequest.cs',
     'src/NoiraPlayer.App/MainPage.xaml.cs',

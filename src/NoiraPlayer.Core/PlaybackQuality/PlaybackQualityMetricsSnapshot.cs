@@ -82,6 +82,7 @@
         public long? VideoStreamStartTimeTicks { get; set; }
         public long? SeekDemuxTargetTicks { get; set; }
         public long? FirstPresentedPositionTicks { get; set; }
+        public double? SeekRecoveryDurationMs { get; set; }
         public double SeekLockWaitDurationMs { get; set; }
         public double SeekExecutionDurationMs { get; set; }
         public double SeekQuiesceDurationMs { get; set; }
