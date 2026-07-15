@@ -18,6 +18,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             CheckFailedLifecycleOperations(report);
             CheckObservedSourceMetadata(report);
             CheckDecoderRecovery(report);
+            CheckPauseResumeRecovery(report);
 
             if (report.Expected == null)
             {
@@ -370,6 +371,152 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 "MaxInteractionRecoveryDurationMs",
                 signal,
                 failureArea);
+        }
+
+        private static void CheckPauseResumeRecovery(PlaybackQualityReport report)
+        {
+            var interaction = report.Interaction;
+            if (!interaction.Attempted || !string.Equals(
+                    interaction.Scenario,
+                    PlaybackQualityExecutionScenario.PauseResume,
+                    StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (!HasCompletePauseResumeEvidence(interaction))
+            {
+                AddPauseResumeFailure(
+                    report,
+                    "interaction.pauseResumeEvidence",
+                    PlaybackQualityFailureClassification.InsufficientInstrumentation,
+                    "complete structured pause/resume evidence",
+                    "missing or invalid fields",
+                    "Structured pause/resume evidence is incomplete.");
+                return;
+            }
+
+            var expectedPositionDelta =
+                interaction.PositionAfterTicks!.Value - interaction.PositionBeforeTicks!.Value;
+            var expectedDecodedDelta = NonNegativeDifference(
+                interaction.DecodedVideoFramesAfter!.Value,
+                interaction.DecodedVideoFramesBefore!.Value);
+            var expectedRenderedDelta = NonNegativeDifference(
+                interaction.RenderedVideoFramesAfter!.Value,
+                interaction.RenderedVideoFramesBefore!.Value);
+            if (interaction.PositionDeltaTicks != expectedPositionDelta)
+            {
+                AddPauseResumeFailure(
+                    report,
+                    "interaction.positionDeltaTicks",
+                    PlaybackQualityFailureClassification.EvaluationHarnessBug,
+                    expectedPositionDelta.ToString(CultureInfo.InvariantCulture),
+                    interaction.PositionDeltaTicks!.Value.ToString(CultureInfo.InvariantCulture),
+                    "Pause/resume position delta is inconsistent with its raw counters.");
+                return;
+            }
+
+            if (interaction.DecodedVideoFrameDelta != expectedDecodedDelta)
+            {
+                AddPauseResumeFailure(
+                    report,
+                    "interaction.decodedVideoFrameDelta",
+                    PlaybackQualityFailureClassification.EvaluationHarnessBug,
+                    expectedDecodedDelta.ToString(CultureInfo.InvariantCulture),
+                    interaction.DecodedVideoFrameDelta!.Value.ToString(CultureInfo.InvariantCulture),
+                    "Pause/resume decoded-frame delta is inconsistent with its raw counters.");
+                return;
+            }
+
+            if (interaction.RenderedVideoFrameDelta != expectedRenderedDelta)
+            {
+                AddPauseResumeFailure(
+                    report,
+                    "interaction.renderedVideoFrameDelta",
+                    PlaybackQualityFailureClassification.EvaluationHarnessBug,
+                    expectedRenderedDelta.ToString(CultureInfo.InvariantCulture),
+                    interaction.RenderedVideoFrameDelta!.Value.ToString(CultureInfo.InvariantCulture),
+                    "Pause/resume rendered-frame delta is inconsistent with its raw counters.");
+                return;
+            }
+
+            if (interaction.ActualPauseDurationMs!.Value + 1.0 <
+                interaction.RequestedPauseDurationMs!.Value)
+            {
+                AddPauseResumeFailure(
+                    report,
+                    "interaction.actualPauseDurationMs",
+                    PlaybackQualityFailureClassification.EvaluationHarnessBug,
+                    Format(interaction.RequestedPauseDurationMs.Value),
+                    Format(interaction.ActualPauseDurationMs.Value),
+                    "The runner resumed before the requested pause duration elapsed.");
+                return;
+            }
+
+            if (interaction.PlaybackFailed == true ||
+                interaction.PositionDeltaTicks <= 0 ||
+                interaction.DecodedVideoFrameDelta == 0 ||
+                interaction.RenderedVideoFrameDelta == 0)
+            {
+                AddPauseResumeFailure(
+                    report,
+                    "interaction.pauseResumeRecovery",
+                    PlaybackQualityFailureClassification.PlayerCoreBug,
+                    "playback resumed with timeline, decode, and render progress",
+                    interaction.PlaybackFailed == true ? "playback failed" : "no post-resume progress",
+                    "Playback did not recover after pause/resume.");
+            }
+        }
+
+        private static bool HasCompletePauseResumeEvidence(PlaybackQualityInteractionEvidence interaction)
+        {
+            return interaction.RequestedPauseDurationMs.HasValue &&
+                double.IsFinite(interaction.RequestedPauseDurationMs.Value) &&
+                interaction.RequestedPauseDurationMs.Value > 0 &&
+                interaction.ActualPauseDurationMs.HasValue &&
+                double.IsFinite(interaction.ActualPauseDurationMs.Value) &&
+                interaction.ActualPauseDurationMs.Value > 0 &&
+                interaction.RecoveryDurationMs.HasValue &&
+                double.IsFinite(interaction.RecoveryDurationMs.Value) &&
+                interaction.RecoveryDurationMs.Value >= 0 &&
+                interaction.PositionBeforeTicks.HasValue &&
+                interaction.PositionAfterTicks.HasValue &&
+                interaction.PositionDeltaTicks.HasValue &&
+                interaction.DecodedVideoFramesBefore.HasValue &&
+                interaction.DecodedVideoFramesAfter.HasValue &&
+                interaction.DecodedVideoFrameDelta.HasValue &&
+                interaction.RenderedVideoFramesBefore.HasValue &&
+                interaction.RenderedVideoFramesAfter.HasValue &&
+                interaction.RenderedVideoFrameDelta.HasValue &&
+                interaction.PlaybackFailed.HasValue;
+        }
+
+        private static ulong NonNegativeDifference(ulong after, ulong before)
+        {
+            return after >= before ? after - before : 0;
+        }
+
+        private static void AddPauseResumeFailure(
+            PlaybackQualityReport report,
+            string signal,
+            string failureClass,
+            string expected,
+            string actual,
+            string message)
+        {
+            report.FailureReasons.Add(message);
+            report.Checks.Add(new PlaybackQualityCheck
+            {
+                Name = "PauseResumeRecovery",
+                Signal = signal,
+                Status = "fail",
+                FailureArea = "playback-lifecycle",
+                FailureClass = failureClass,
+                Expected = expected,
+                Actual = actual,
+                Message = message
+            });
+            AddRelevantSignal(report, signal);
         }
 
         private static void CheckObservedSourceMetadata(PlaybackQualityReport report)

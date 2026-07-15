@@ -495,6 +495,21 @@ internal static class NativeHeadlessHarness
     private static PlaybackQualityInteractionEvidence CreateInteractionEvidence(
         NativeHeadlessHelperResult helper)
     {
+        if (helper.PauseResume.Attempted)
+        {
+            return PlaybackQualityInteractionCapture.CreatePauseResume(
+                requestedPauseDurationMs: helper.PauseResume.DurationSeconds * 1000.0,
+                actualPauseDurationMs: helper.PauseResume.ActualPauseDurationMs,
+                recoveryDurationMs: helper.PauseResume.ResumeRecoveryDurationMs,
+                positionBeforeTicks: helper.PauseResume.PositionBeforePauseTicks,
+                positionAfterTicks: helper.PauseResume.PositionAfterResumeTicks,
+                decodedVideoFramesBefore: helper.PauseResume.DecodedVideoFramesBeforePause,
+                decodedVideoFramesAfter: helper.PauseResume.PostResumeDecodedVideoFrames,
+                renderedVideoFramesBefore: helper.PauseResume.RenderedVideoFramesBeforePause,
+                renderedVideoFramesAfter: helper.PauseResume.PostResumeRenderedVideoFrames,
+                playbackFailed: helper.PauseResume.PlaybackFailed);
+        }
+
         if (helper.AudioSwitch.Attempted)
         {
             return new PlaybackQualityInteractionEvidence

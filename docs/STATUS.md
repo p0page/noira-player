@@ -2,6 +2,16 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-15 更新：v0.20 将暂停恢复从日志文本升级为强制结构化证据
+
+审计发现，v0.19 的三条 native 暂停恢复 case 虽然真实执行并通过，但暂停时长、恢复耗时和前后帧计数只埋在 `lifecycle.resume.message` 文本里，标准 `interaction` 节为空。模型无法可靠区分“恢复成功”“无进度失败”和“采集缺失”，严格 report-set 也不会拒绝空结构。这与既定暂停恢复设计不符，属于评测器缺陷，不是 Core 改善。
+
+评测契约现升级为 `playback-quality-v0.20`。native-headless 与 App-hosted 共用 `PlaybackQualityInteractionCapture.CreatePauseResume`，报告必须保存请求/实际暂停时长、恢复耗时、暂停前后 position、decoded/rendered 原始计数及 delta、`playbackFailed`。required-signal、JSON presence catalog、report composer、evaluator 和模型分析已完整贯通。显式零进度或 `playbackFailed=true` 是存在的失败证据，必须判为 player-core bug；字段缺失判为 insufficient instrumentation；原始计数与 delta 不一致判为 evaluation harness bug，不能把三者混成 pass。
+
+真实 native 复核覆盖 1 秒网络重连、30 秒长暂停和暂停后的 demux read error recovery，三份报告均为 `v0.20 pass/completed`、模型状态 `recovered`、严格校验 `1/1 matched` 且 0 error。实际恢复耗时约为 `61.44ms`、`61.40ms` 和 `1675.27ms`，原始位置与解码/渲染计数均继续推进。完整 38 阶段门禁通过，native corpus 约运行 370 秒；Core 全量 `1156/1156` 通过，完整 App Debug x64 和 Native AOT Publish 均成功。
+
+代表性 App-hosted 私有暂停 case 也从本轮完整 Native AOT 包注册并真实运行：请求暂停 10 秒，实际约 `10005.68ms`，恢复约 `111.48ms`，position、decoded 和 rendered 分别增加 `900000 ticks`、3 帧和 2 帧；报告为 `pass/completed/recovered`，严格校验 `1/1 matched`、0 error。私有 locator、case id 和报告仍只存在 ignored 本地目录。v0.19 与 v0.20 不得直接生成质量改善结论；最新正式统一性能 baseline 仍是 v0.18，本轮结果只建立 v0.20 暂停恢复功能基线。
+
 ## 2026-07-15 更新：v0.19 以显式远距离目标覆盖真实 timeline seek
 
 评测契约升级为 `playback-quality-v0.19`。旧 timeline case 只从起播位置固定移动 1 秒，虽然真实调用了 native seek，却不足以发现进度条映射错误、拖动无效或远距离定位失败。现在 timeline manifest 必须声明绝对逻辑时间 `seekTargetPositionTicks`，且不能与 `startPositionTicks` 相同；该值必须原样贯穿 manifest runner、native-headless、CLI run plan、App dev-command、`PlaybackLaunchRequest`、`PlaybackPage` 和 report。report-set 会逐 case 校验实际目标与 manifest 完全一致，缺失、被改写或 scenario 不匹配都失败。App-hosted 已删除运行时自行前后移动 1 秒的逻辑。

@@ -1669,40 +1669,60 @@ namespace NoiraPlayer.App.Views
                     sampleObservationClock.Stop();
                     await _orchestrator.PauseAsync();
                     var positionBeforePauseTicks = GetCurrentPositionTicks();
-                    TryReadQualityRunInteractionMetrics(
-                        out var renderedVideoFramesBefore,
-                        out _);
+                    var hasPauseBeforeMetrics = TryReadQualityRunMetrics(
+                        out var pauseBeforeMetrics);
+                    pauseBeforeMetrics.VideoPositionTicks = positionBeforePauseTicks;
                     var pauseDuration = request.QualityPauseSeconds > 0
                         ? TimeSpan.FromSeconds(request.QualityPauseSeconds)
                         : shortDelay;
+                    var actualPauseClock = Stopwatch.StartNew();
                     await Task.Delay(pauseDuration);
+                    actualPauseClock.Stop();
                     var positionDuringPauseTicks = GetCurrentPositionTicks();
                     var positionBeforeResumeTicks = positionDuringPauseTicks;
+                    var resumeRecoveryClock = Stopwatch.StartNew();
                     await _orchestrator.ResumeAsync();
                     sampleObservationClock.Start();
                     var pauseResumeTimeoutAt = DateTimeOffset.UtcNow.AddSeconds(5);
                     var positionAfterResumeTicks = GetCurrentPositionTicks();
-                    var renderedVideoFramesAfter = renderedVideoFramesBefore;
+                    var pauseAfterMetrics = pauseBeforeMetrics;
+                    var hasPauseAfterMetrics = false;
                     var pauseResumeRecovered = false;
                     while (DateTimeOffset.UtcNow < pauseResumeTimeoutAt)
                     {
                         await Task.Delay(TimeSpan.FromMilliseconds(100));
                         positionAfterResumeTicks = GetCurrentPositionTicks();
-                        TryReadQualityRunInteractionMetrics(
-                            out renderedVideoFramesAfter,
-                            out _);
-                        pauseResumeRecovered =
+                        hasPauseAfterMetrics = TryReadQualityRunMetrics(
+                            out pauseAfterMetrics);
+                        pauseAfterMetrics.VideoPositionTicks = positionAfterResumeTicks;
+                        pauseResumeRecovered = hasPauseBeforeMetrics &&
+                            hasPauseAfterMetrics &&
                             PlaybackQualityInteractionEvidencePolicy.IsPauseResumeRecovered(
                                 positionBeforePauseTicks,
                                 positionDuringPauseTicks,
                                 positionBeforeResumeTicks,
                                 positionAfterResumeTicks,
-                                renderedVideoFramesBefore,
-                                renderedVideoFramesAfter);
+                                pauseBeforeMetrics.RenderedVideoFrames,
+                                pauseAfterMetrics.RenderedVideoFrames);
                         if (pauseResumeRecovered)
                         {
                             break;
                         }
+                    }
+                    resumeRecoveryClock.Stop();
+                    if (hasPauseBeforeMetrics && hasPauseAfterMetrics)
+                    {
+                        interaction = PlaybackQualityInteractionCapture.CreatePauseResume(
+                            requestedPauseDurationMs: pauseDuration.TotalMilliseconds,
+                            actualPauseDurationMs: actualPauseClock.Elapsed.TotalMilliseconds,
+                            recoveryDurationMs: resumeRecoveryClock.Elapsed.TotalMilliseconds,
+                            positionBeforeTicks: positionBeforePauseTicks,
+                            positionAfterTicks: positionAfterResumeTicks,
+                            decodedVideoFramesBefore: pauseBeforeMetrics.DecodedVideoFrames,
+                            decodedVideoFramesAfter: pauseAfterMetrics.DecodedVideoFrames,
+                            renderedVideoFramesBefore: pauseBeforeMetrics.RenderedVideoFrames,
+                            renderedVideoFramesAfter: pauseAfterMetrics.RenderedVideoFrames,
+                            playbackFailed: !pauseResumeRecovered);
                     }
                     AddQualityRunLifecycleEvent(
                         lifecycle,
@@ -1717,8 +1737,8 @@ namespace NoiraPlayer.App.Views
                         pauseResumeRecovered ? "success" : "failed",
                         "app-hosted pause-resume resumed position=" +
                         positionBeforeResumeTicks + "->" + positionAfterResumeTicks +
-                        " renderedVideoFrames=" + renderedVideoFramesBefore +
-                        "->" + renderedVideoFramesAfter);
+                        " renderedVideoFrames=" + pauseBeforeMetrics.RenderedVideoFrames +
+                        "->" + pauseAfterMetrics.RenderedVideoFrames);
                     break;
 
                 case PlaybackQualityExecutionScenario.Timeline:

@@ -197,7 +197,7 @@ $report = [ordered]@{
 
 $envelope = @{
     schemaVersion = 1
-    evaluationVersion = 'playback-quality-v0.19'
+    evaluationVersion = 'playback-quality-v0.20'
     caseMetadata = @{ caseId = $caseId; category = 'stable'; severity = 'high'; stability = 'stable' }
     report = $report
 }

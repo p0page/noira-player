@@ -46,6 +46,48 @@ public sealed class PlaybackQualityReportComposerTests
     }
 
     [Fact]
+    public void Compose_Preserves_Structured_PauseResume_Evidence()
+    {
+        var interaction = PlaybackQualityInteractionCapture.CreatePauseResume(
+            requestedPauseDurationMs: 1_000,
+            actualPauseDurationMs: 1_012,
+            recoveryDurationMs: 64,
+            positionBeforeTicks: 10_000_000,
+            positionAfterTicks: 12_000_000,
+            decodedVideoFramesBefore: 30,
+            decodedVideoFramesAfter: 36,
+            renderedVideoFramesBefore: 29,
+            renderedVideoFramesAfter: 35,
+            playbackFailed: false);
+
+        var result = PlaybackQualityReportComposer.Compose(new PlaybackQualityReportRequest
+        {
+            RunId = "pause-resume-structured",
+            Descriptor = CreatePlaybackDescriptor(frameRate: 23.976),
+            Metrics = CreateStableMetrics(maxFrameGapMs: 60),
+            Expected = new PlaybackQualityExpected { RequireValidatedConversion = false },
+            Interaction = interaction
+        });
+
+        Assert.NotSame(interaction, result.Report.Interaction);
+        Assert.Equal("pause-resume", result.Report.Interaction.Scenario);
+        Assert.Equal(1_000, result.Report.Interaction.RequestedPauseDurationMs);
+        Assert.Equal(1_012, result.Report.Interaction.ActualPauseDurationMs);
+        Assert.Equal(64, result.Report.Interaction.RecoveryDurationMs);
+        Assert.Equal(10_000_000, result.Report.Interaction.PositionBeforeTicks);
+        Assert.Equal(12_000_000, result.Report.Interaction.PositionAfterTicks);
+        Assert.Equal(30UL, result.Report.Interaction.DecodedVideoFramesBefore);
+        Assert.Equal(36UL, result.Report.Interaction.DecodedVideoFramesAfter);
+        Assert.Equal(29UL, result.Report.Interaction.RenderedVideoFramesBefore);
+        Assert.Equal(35UL, result.Report.Interaction.RenderedVideoFramesAfter);
+        Assert.Equal(2_000_000, result.Report.Interaction.PositionDeltaTicks);
+        Assert.Equal(6UL, result.Report.Interaction.DecodedVideoFrameDelta);
+        Assert.Equal(6UL, result.Report.Interaction.RenderedVideoFrameDelta);
+        Assert.False(result.Report.Interaction.PlaybackFailed);
+        Assert.Equal("recovered", result.ModelAnalysis.Interaction.Status);
+    }
+
+    [Fact]
     public void Compose_Surfaces_Frame_Pacing_Evidence_When_Max_Frame_Gap_Fails()
     {
         var descriptor = CreatePlaybackDescriptor(frameRate: 23.976);
@@ -99,7 +141,7 @@ public sealed class PlaybackQualityReportComposerTests
         var json = PlaybackQualityReportSerializer.Serialize(result);
 
         Assert.Contains("\"schemaVersion\": 1", json);
-        Assert.Contains("\"evaluationVersion\": \"playback-quality-v0.19\"", json);
+        Assert.Contains("\"evaluationVersion\": \"playback-quality-v0.20\"", json);
         Assert.Contains("\"report\"", json);
         Assert.Contains("\"modelAnalysis\"", json);
         Assert.Contains("\"caseMetadata\"", json);

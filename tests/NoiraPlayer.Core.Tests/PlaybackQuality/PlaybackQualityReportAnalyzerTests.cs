@@ -41,6 +41,72 @@ public sealed class PlaybackQualityReportAnalyzerTests
     }
 
     [Fact]
+    public void Analyze_Exposes_Structured_PauseResume_Recovery()
+    {
+        var report = new PlaybackQualityReport
+        {
+            Result = "pass",
+            Interaction = new PlaybackQualityInteractionEvidence
+            {
+                Scenario = "pause-resume",
+                Attempted = true,
+                RequestedPauseDurationMs = 30_000,
+                ActualPauseDurationMs = 30_014.9,
+                RecoveryDurationMs = 59.994,
+                PositionBeforeTicks = 15_000_000,
+                PositionAfterTicks = 45_600_000,
+                DecodedVideoFramesBefore = 47,
+                DecodedVideoFramesAfter = 139,
+                RenderedVideoFramesBefore = 46,
+                RenderedVideoFramesAfter = 135,
+                PlaybackFailed = false,
+                PositionDeltaTicks = 30_600_000,
+                DecodedVideoFrameDelta = 92,
+                RenderedVideoFrameDelta = 89
+            }
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("recovered", analysis.Interaction.Status);
+        Assert.Equal("pause-resume", analysis.Interaction.Scenario);
+        Assert.Equal(30_014.9, analysis.Interaction.ActualPauseDurationMs);
+        Assert.Equal(59.994, analysis.Interaction.RecoveryDurationMs);
+        Assert.Equal(92UL, analysis.Interaction.DecodedVideoFrameDelta);
+        Assert.Equal(89UL, analysis.Interaction.RenderedVideoFrameDelta);
+        Assert.False(analysis.Interaction.PlaybackFailed);
+        Assert.Contains("interaction.actualPauseDurationMs", analysis.EvidenceSignals);
+        Assert.DoesNotContain("interaction.actualPauseDurationMs", analysis.MissingEvidence);
+    }
+
+    [Fact]
+    public void Analyze_Classifies_Observed_NoProgress_PauseResume_As_Failed_Not_Missing()
+    {
+        var report = new PlaybackQualityReport
+        {
+            Result = "fail",
+            Interaction = PlaybackQualityInteractionCapture.CreatePauseResume(
+                requestedPauseDurationMs: 1_000,
+                actualPauseDurationMs: 1_010,
+                recoveryDurationMs: 2_000,
+                positionBeforeTicks: 20_000_000,
+                positionAfterTicks: 20_000_000,
+                decodedVideoFramesBefore: 90,
+                decodedVideoFramesAfter: 90,
+                renderedVideoFramesBefore: 88,
+                renderedVideoFramesAfter: 88,
+                playbackFailed: true)
+        };
+
+        var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
+
+        Assert.Equal("failed", analysis.Interaction.Status);
+        Assert.Empty(analysis.Interaction.MissingSignals);
+        Assert.DoesNotContain("interaction.decodedVideoFrameDelta", analysis.MissingEvidence);
+        Assert.DoesNotContain("interaction.renderedVideoFrameDelta", analysis.MissingEvidence);
+    }
+
+    [Fact]
     public void Analyze_Emits_Current_Analyzer_Version()
     {
         var report = new PlaybackQualityReport
@@ -51,7 +117,7 @@ public sealed class PlaybackQualityReportAnalyzerTests
 
         var analysis = PlaybackQualityReportAnalyzer.Analyze(report);
 
-        Assert.Equal(6, PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion);
+        Assert.Equal(7, PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion);
         Assert.Equal(PlaybackQualityReportAnalyzer.CurrentAnalyzerVersion, analysis.AnalyzerVersion);
     }
 

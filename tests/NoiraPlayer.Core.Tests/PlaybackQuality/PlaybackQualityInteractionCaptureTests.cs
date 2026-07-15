@@ -53,6 +53,59 @@ public sealed class PlaybackQualityInteractionCaptureTests
         Assert.Equal(2UL, evidence.SubtitleCueRenderCountDelta);
     }
 
+    [Fact]
+    public void CreatePauseResume_Preserves_Raw_Progress_And_Recovery_Evidence()
+    {
+        var evidence = PlaybackQualityInteractionCapture.CreatePauseResume(
+            requestedPauseDurationMs: 30_000,
+            actualPauseDurationMs: 30_014.9,
+            recoveryDurationMs: 59.994,
+            positionBeforeTicks: 15_000_000,
+            positionAfterTicks: 45_600_000,
+            decodedVideoFramesBefore: 47,
+            decodedVideoFramesAfter: 139,
+            renderedVideoFramesBefore: 46,
+            renderedVideoFramesAfter: 135,
+            playbackFailed: false);
+
+        Assert.True(evidence.Attempted);
+        Assert.Equal("pause-resume", evidence.Scenario);
+        Assert.Equal(30_000, evidence.RequestedPauseDurationMs);
+        Assert.Equal(30_014.9, evidence.ActualPauseDurationMs);
+        Assert.Equal(59.994, evidence.RecoveryDurationMs);
+        Assert.Equal(15_000_000, evidence.PositionBeforeTicks);
+        Assert.Equal(45_600_000, evidence.PositionAfterTicks);
+        Assert.Equal(47UL, evidence.DecodedVideoFramesBefore);
+        Assert.Equal(139UL, evidence.DecodedVideoFramesAfter);
+        Assert.Equal(46UL, evidence.RenderedVideoFramesBefore);
+        Assert.Equal(135UL, evidence.RenderedVideoFramesAfter);
+        Assert.False(evidence.PlaybackFailed);
+        Assert.Equal(30_600_000, evidence.PositionDeltaTicks);
+        Assert.Equal(92UL, evidence.DecodedVideoFrameDelta);
+        Assert.Equal(89UL, evidence.RenderedVideoFrameDelta);
+    }
+
+    [Fact]
+    public void CreatePauseResume_Preserves_Zero_And_Regressed_Progress_As_Failure_Evidence()
+    {
+        var evidence = PlaybackQualityInteractionCapture.CreatePauseResume(
+            requestedPauseDurationMs: 1_000,
+            actualPauseDurationMs: 1_010,
+            recoveryDurationMs: 2_000,
+            positionBeforeTicks: 20_000_000,
+            positionAfterTicks: 19_000_000,
+            decodedVideoFramesBefore: 90,
+            decodedVideoFramesAfter: 90,
+            renderedVideoFramesBefore: 88,
+            renderedVideoFramesAfter: 87,
+            playbackFailed: true);
+
+        Assert.Equal(-1_000_000, evidence.PositionDeltaTicks);
+        Assert.Equal(0UL, evidence.DecodedVideoFrameDelta);
+        Assert.Equal(0UL, evidence.RenderedVideoFrameDelta);
+        Assert.True(evidence.PlaybackFailed);
+    }
+
     [Theory]
     [InlineData("audio-switch", "subtitle-switch", 5, 6)]
     [InlineData("audio-switch", "audio-switch", 5, 5)]

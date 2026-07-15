@@ -18,7 +18,7 @@ The primary consumer of `quality-run` reports is an automated model or agent, no
 ## Required Top-Level Fields
 
 - `schemaVersion`: JSON schema version.
-- `evaluationVersion`: stable evaluation contract identifier for model and baseline compatibility, currently `playback-quality-v0.19`.
+- `evaluationVersion`: stable evaluation contract identifier for model and baseline compatibility, currently `playback-quality-v0.20`.
 - `metricVersion`: semantic version for metric meaning, initially `software-quality-v1`.
 - `runId`: stable case identifier.
 - `result`: `pass`, `fail`, or `observed`.
@@ -27,6 +27,12 @@ The primary consumer of `quality-run` reports is an automated model or agent, no
 - `checks[].failureClass`: conservative failure responsibility classification for failed checks.
 - `limitations`: facts the report cannot prove.
 - `source`, `startup`, `position`, `tracks`, `timing`, `sync`, `buffers`, `colorPipeline`, `display`: raw metric sections.
+
+## v0.20 暂停恢复证据
+
+`pause-resume` case 必须在 `interaction` 中提供 `requestedPauseDurationMs`、`actualPauseDurationMs`、`recoveryDurationMs`、`positionBeforeTicks`、`positionAfterTicks`、`positionDeltaTicks`、`decodedVideoFramesBefore`、`decodedVideoFramesAfter`、`decodedVideoFrameDelta`、`renderedVideoFramesBefore`、`renderedVideoFramesAfter`、`renderedVideoFrameDelta` 和 `playbackFailed`。这些字段必须来自真实 native/App-hosted 播放快照，不能从 manifest expected、probe 或生命周期 message 反推。
+
+证据存在与行为成功必须分开判断。显式零 delta 或 `playbackFailed=true` 表示已观测到恢复失败，不是缺失证据；字段不存在或非法才是采集不足。原始 before/after 与 delta 不一致表示评测器错误。只有实际暂停达到请求时长、恢复后 position/decode/render 都推进且 `playbackFailed=false` 时，模型分析才能输出 `interaction.status = recovered`。
 
 For timeline/seek cases, `position.seekPacketCacheEnabled`, `position.seekPacketCacheHit`, `position.seekPacketCachePacketCount`, `position.seekPacketCacheBytes`, `position.seekPacketCacheWindowDurationTicks`, and `position.seekFallbackReason` are mandatory context. A cache hit must report `position.seekDemuxTargetTicks = -1` and fallback reason `none`; a miss must retain the actual demux target and a non-empty fallback reason. These cache fields explain operation/recovery changes and are comparison context, not standalone improvement or regression scores.
 

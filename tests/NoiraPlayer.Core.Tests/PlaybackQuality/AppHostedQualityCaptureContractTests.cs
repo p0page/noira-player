@@ -84,6 +84,7 @@ public sealed class AppHostedQualityCaptureContractTests
         Assert.Contains("Scenario = referenceCase.ExecutionRequirement.Scenario", playbackPage, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityRuntimeEvidenceCollector.ComposeRunResult", playbackPage, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityInteractionCapture.Create", playbackPage, StringComparison.Ordinal);
+        Assert.Contains("PlaybackQualityInteractionCapture.CreatePauseResume", playbackPage, StringComparison.Ordinal);
         Assert.Contains("interaction", playbackPage, StringComparison.Ordinal);
         Assert.Contains("WriteQualityRunErrorReportAsync", playbackPage, StringComparison.Ordinal);
         Assert.Contains("PlaybackQualityRuntimeEvidenceCollector.ComposeErrorRunResult", playbackPage, StringComparison.Ordinal);

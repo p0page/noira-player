@@ -1,5 +1,15 @@
 ﻿# 技术决策
 
+## 2026-07-15：暂停恢复必须提供可区分失败与缺证据的结构化 interaction
+
+决策：评测版本升级为 `playback-quality-v0.20`。所有 pause-resume case 必须在 `interaction` 中保存请求/实际暂停时长、恢复耗时、暂停前后 position、decoded/rendered 原始计数及 delta、`playbackFailed`。native-headless 与 App-hosted 必须调用同一 Core factory 生成这些字段；signal catalog、required-signal、evaluator、模型分析和序列化必须同步覆盖。生命周期 message 只用于人类诊断，不能代替结构化字段。
+
+分类规则：字段不存在或非法属于 insufficient instrumentation；字段齐全但无进度或恢复失败属于 player-core bug；原始计数与 delta 自相矛盾属于 evaluation harness bug。显式的 `0` 和 `true` 仍是有效观测，不能因代表失败而被当作缺字段。报告只有在实际暂停达到请求时长，恢复后 position、decode、render 均推进且 `playbackFailed=false` 时，模型状态才可为 `recovered`。
+
+原因：v0.19 runner 已在 helper 层解析暂停恢复事实，却只把它们拼进 message，导致 manifest 声称覆盖与标准报告实际能力不一致。严格 presence scanner 又因 signal catalog 漏登记新字段而一度拒绝字段完整的真实报告；目录完整性测试现要求所有 pause-resume required signal 都存在于 catalog，防止 required-signal 与 JSON 扫描器再次分叉。
+
+边界：该变化修复评测与归因，不调整暂停、网络恢复或解码策略，不声称播放质量提升。v0.19 报告不得与 v0.20 混作 baseline/candidate。关键结论必须同时通过真实 native case、完整 App 构建和至少一条 App-hosted pause-resume 复核。
+
 ## 2026-07-15：App-hosted 筛选执行必须绑定精确 executed manifest
 
 决策：App-hosted gate 从完整 manifest 筛选一个或多个 case 时，必须先写出只包含实际所选 case 的 ignored 本地 executed manifest。导出报告后、进入分析前，必须使用该 executed manifest 运行 `validate-report-set`，并要求 expected、report、matched 数量都与实际选择数完全一致，且 structure、execution 和整体 validation 全部有效。只检查计划、导出数量或分析数量不能替代严格校验。

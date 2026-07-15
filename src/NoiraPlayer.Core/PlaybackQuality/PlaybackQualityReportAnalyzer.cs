@@ -16,6 +16,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public string SuggestedNextAction { get; set; } = "";
         public PlaybackQualityStartupAssessment Startup { get; set; } = new PlaybackQualityStartupAssessment();
         public PlaybackQualityLifecycleAssessment Lifecycle { get; set; } = new PlaybackQualityLifecycleAssessment();
+        public PlaybackQualityInteractionAssessment Interaction { get; set; } = new PlaybackQualityInteractionAssessment();
         public PlaybackQualityEnvironmentAssessment Environment { get; set; } = new PlaybackQualityEnvironmentAssessment();
         public PlaybackQualitySourceAssessment Source { get; set; } = new PlaybackQualitySourceAssessment();
         public PlaybackQualityTracksAssessment Tracks { get; set; } = new PlaybackQualityTracksAssessment();
@@ -95,6 +96,28 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public List<string> Operations { get; } = new List<string>();
         public List<string> Signals { get; } = new List<string>();
         public List<string> MissingOperations { get; } = new List<string>();
+    }
+
+    public sealed class PlaybackQualityInteractionAssessment
+    {
+        public string Status { get; set; } = "not-attempted";
+        public string Scenario { get; set; } = "";
+        public bool Attempted { get; set; }
+        public double? RequestedPauseDurationMs { get; set; }
+        public double? ActualPauseDurationMs { get; set; }
+        public double? RecoveryDurationMs { get; set; }
+        public long? PositionBeforeTicks { get; set; }
+        public long? PositionAfterTicks { get; set; }
+        public long? PositionDeltaTicks { get; set; }
+        public ulong? DecodedVideoFramesBefore { get; set; }
+        public ulong? DecodedVideoFramesAfter { get; set; }
+        public ulong? DecodedVideoFrameDelta { get; set; }
+        public ulong? RenderedVideoFramesBefore { get; set; }
+        public ulong? RenderedVideoFramesAfter { get; set; }
+        public ulong? RenderedVideoFrameDelta { get; set; }
+        public bool? PlaybackFailed { get; set; }
+        public List<string> Signals { get; } = new List<string>();
+        public List<string> MissingSignals { get; } = new List<string>();
     }
 
     public sealed class PlaybackQualityEnvironmentAssessment
@@ -314,7 +337,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
     public static class PlaybackQualityReportAnalyzer
     {
-        public const int CurrentAnalyzerVersion = 6;
+        public const int CurrentAnalyzerVersion = 7;
 
         public static PlaybackQualityModelAnalysis Analyze(PlaybackQualityReport report)
         {
@@ -382,6 +405,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
             analysis.Sample = AssessSample(report);
             analysis.Startup = AssessStartup(report);
             analysis.Lifecycle = AssessLifecycle(report);
+            analysis.Interaction = AssessInteraction(analysis, report);
             analysis.Environment = AssessEnvironment(report);
             analysis.Source = AssessSource(report);
             analysis.Tracks = AssessTracks(report);
@@ -1046,6 +1070,98 @@ namespace NoiraPlayer.Core.PlaybackQuality
             lifecycle.Reason = "Playback lifecycle telemetry captured required operations.";
             return lifecycle;
         }
+
+        private static PlaybackQualityInteractionAssessment AssessInteraction(
+            PlaybackQualityModelAnalysis analysis,
+            PlaybackQualityReport report)
+        {
+            var source = report.Interaction ?? new PlaybackQualityInteractionEvidence();
+            var interaction = new PlaybackQualityInteractionAssessment
+            {
+                Scenario = source.Scenario,
+                Attempted = source.Attempted,
+                RequestedPauseDurationMs = source.RequestedPauseDurationMs,
+                ActualPauseDurationMs = source.ActualPauseDurationMs,
+                RecoveryDurationMs = source.RecoveryDurationMs,
+                PositionBeforeTicks = source.PositionBeforeTicks,
+                PositionAfterTicks = source.PositionAfterTicks,
+                PositionDeltaTicks = source.PositionDeltaTicks,
+                DecodedVideoFramesBefore = source.DecodedVideoFramesBefore,
+                DecodedVideoFramesAfter = source.DecodedVideoFramesAfter,
+                DecodedVideoFrameDelta = source.DecodedVideoFrameDelta,
+                RenderedVideoFramesBefore = source.RenderedVideoFramesBefore,
+                RenderedVideoFramesAfter = source.RenderedVideoFramesAfter,
+                RenderedVideoFrameDelta = source.RenderedVideoFrameDelta,
+                PlaybackFailed = source.PlaybackFailed
+            };
+
+            if (!source.Attempted)
+            {
+                return interaction;
+            }
+
+            AddInteractionSignal(interaction, analysis, "interaction.scenario", !string.IsNullOrWhiteSpace(source.Scenario));
+            if (!string.Equals(source.Scenario, PlaybackQualityExecutionScenario.PauseResume, StringComparison.Ordinal))
+            {
+                interaction.Status = "observed";
+                return interaction;
+            }
+
+            AddInteractionSignal(interaction, analysis, "interaction.requestedPauseDurationMs", HasFinitePositive(source.RequestedPauseDurationMs));
+            AddInteractionSignal(interaction, analysis, "interaction.actualPauseDurationMs", HasFinitePositive(source.ActualPauseDurationMs));
+            AddInteractionSignal(interaction, analysis, "interaction.recoveryDurationMs", HasFiniteNonNegative(source.RecoveryDurationMs));
+            AddInteractionSignal(interaction, analysis, "interaction.positionBeforeTicks", HasNonNegative(source.PositionBeforeTicks));
+            AddInteractionSignal(interaction, analysis, "interaction.positionAfterTicks", HasNonNegative(source.PositionAfterTicks));
+            AddInteractionSignal(interaction, analysis, "interaction.positionDeltaTicks", source.PositionDeltaTicks.HasValue);
+            AddInteractionSignal(interaction, analysis, "interaction.decodedVideoFramesBefore", source.DecodedVideoFramesBefore.HasValue);
+            AddInteractionSignal(interaction, analysis, "interaction.decodedVideoFramesAfter", source.DecodedVideoFramesAfter.HasValue);
+            AddInteractionSignal(interaction, analysis, "interaction.decodedVideoFrameDelta", source.DecodedVideoFrameDelta.HasValue);
+            AddInteractionSignal(interaction, analysis, "interaction.renderedVideoFramesBefore", source.RenderedVideoFramesBefore.HasValue);
+            AddInteractionSignal(interaction, analysis, "interaction.renderedVideoFramesAfter", source.RenderedVideoFramesAfter.HasValue);
+            AddInteractionSignal(interaction, analysis, "interaction.renderedVideoFrameDelta", source.RenderedVideoFrameDelta.HasValue);
+            AddInteractionSignal(interaction, analysis, "interaction.playbackFailed", source.PlaybackFailed.HasValue);
+
+            if (interaction.MissingSignals.Count > 0)
+            {
+                interaction.Status = "missing-evidence";
+                return interaction;
+            }
+
+            interaction.Status = source.PlaybackFailed == false &&
+                source.ActualPauseDurationMs!.Value + 1.0 >= source.RequestedPauseDurationMs!.Value &&
+                source.PositionDeltaTicks > 0 &&
+                source.DecodedVideoFrameDelta > 0 &&
+                source.RenderedVideoFrameDelta > 0
+                    ? "recovered"
+                    : "failed";
+            return interaction;
+        }
+
+        private static void AddInteractionSignal(
+            PlaybackQualityInteractionAssessment interaction,
+            PlaybackQualityModelAnalysis analysis,
+            string signal,
+            bool present)
+        {
+            if (present)
+            {
+                AddUnique(interaction.Signals, signal);
+                AddUnique(analysis.EvidenceSignals, signal);
+                return;
+            }
+
+            AddUnique(interaction.MissingSignals, signal);
+            AddUnique(analysis.MissingEvidence, signal);
+        }
+
+        private static bool HasFinitePositive(double? value) =>
+            value.HasValue && double.IsFinite(value.Value) && value.Value > 0;
+
+        private static bool HasFiniteNonNegative(double? value) =>
+            value.HasValue && double.IsFinite(value.Value) && value.Value >= 0;
+
+        private static bool HasNonNegative(long? value) =>
+            value.HasValue && value.Value >= 0;
 
         private static void AddRequiredLifecycleOperations(
             PlaybackQualityLifecycleAssessment lifecycle,

@@ -168,6 +168,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
     {
         public string Scenario { get; set; } = "";
         public bool Attempted { get; set; }
+        public double? RequestedPauseDurationMs { get; set; }
+        public double? ActualPauseDurationMs { get; set; }
         public double? OperationDurationMs { get; set; }
         public double? LockWaitDurationMs { get; set; }
         public double? ExecutionDurationMs { get; set; }
@@ -182,10 +184,18 @@ namespace NoiraPlayer.Core.PlaybackQuality
         public long? PacketCacheWindowDurationTicks { get; set; }
         public double? RecoveryDurationMs { get; set; }
         public double? CueRenderDurationMs { get; set; }
+        public long? PositionBeforeTicks { get; set; }
+        public long? PositionAfterTicks { get; set; }
         public long? PositionDeltaTicks { get; set; }
+        public ulong? DecodedVideoFramesBefore { get; set; }
+        public ulong? DecodedVideoFramesAfter { get; set; }
+        public ulong? DecodedVideoFrameDelta { get; set; }
+        public ulong? RenderedVideoFramesBefore { get; set; }
+        public ulong? RenderedVideoFramesAfter { get; set; }
         public ulong? SubmittedAudioFrameDelta { get; set; }
         public ulong? RenderedVideoFrameDelta { get; set; }
         public ulong? SubtitleCueRenderCountDelta { get; set; }
+        public bool? PlaybackFailed { get; set; }
     }
 
     public sealed class PlaybackQualityRuntimeMetrics

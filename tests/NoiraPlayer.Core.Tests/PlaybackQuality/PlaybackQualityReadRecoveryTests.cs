@@ -230,7 +230,7 @@ public sealed class PlaybackQualityReadRecoveryTests
         var json = PlaybackQualityReportSerializer.Serialize(report);
         var parsed = PlaybackQualityReportSerializer.Deserialize(json);
 
-        Assert.Equal("playback-quality-v0.19", PlaybackQualityRunResult.CurrentEvaluationVersion);
+        Assert.Equal("playback-quality-v0.20", PlaybackQualityRunResult.CurrentEvaluationVersion);
         Assert.Contains("\"readRecovery\"", json);
         Assert.Contains("\"minReadErrors\": 1", json);
         Assert.Contains("\"readRecoveryCount\": 1", json);

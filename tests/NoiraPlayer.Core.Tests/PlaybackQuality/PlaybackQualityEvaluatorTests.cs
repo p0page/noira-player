@@ -1769,6 +1769,63 @@ public sealed class PlaybackQualityEvaluatorTests
     }
 
     [Fact]
+    public void Evaluate_Fails_PauseResume_With_Observed_NoProgress_As_Player_Core_Bug()
+    {
+        var report = new PlaybackQualityReport
+        {
+            Expected = new PlaybackQualityExpected { RequireValidatedConversion = false },
+            Interaction = PlaybackQualityInteractionCapture.CreatePauseResume(
+                requestedPauseDurationMs: 1_000,
+                actualPauseDurationMs: 1_010,
+                recoveryDurationMs: 2_000,
+                positionBeforeTicks: 20_000_000,
+                positionAfterTicks: 20_000_000,
+                decodedVideoFramesBefore: 90,
+                decodedVideoFramesAfter: 90,
+                renderedVideoFramesBefore: 88,
+                renderedVideoFramesAfter: 88,
+                playbackFailed: true)
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(report.Checks, check =>
+            check.Signal == "interaction.pauseResumeRecovery" &&
+            check.Status == "fail" &&
+            check.FailureClass == PlaybackQualityFailureClassification.PlayerCoreBug);
+    }
+
+    [Fact]
+    public void Evaluate_Fails_Inconsistent_PauseResume_Delta_As_Harness_Bug()
+    {
+        var interaction = PlaybackQualityInteractionCapture.CreatePauseResume(
+            requestedPauseDurationMs: 1_000,
+            actualPauseDurationMs: 1_010,
+            recoveryDurationMs: 60,
+            positionBeforeTicks: 20_000_000,
+            positionAfterTicks: 21_000_000,
+            decodedVideoFramesBefore: 90,
+            decodedVideoFramesAfter: 93,
+            renderedVideoFramesBefore: 88,
+            renderedVideoFramesAfter: 91,
+            playbackFailed: false);
+        interaction.RenderedVideoFrameDelta = 99;
+        var report = new PlaybackQualityReport
+        {
+            Expected = new PlaybackQualityExpected { RequireValidatedConversion = false },
+            Interaction = interaction
+        };
+
+        PlaybackQualityEvaluator.Evaluate(report);
+
+        Assert.Equal("fail", report.Result);
+        Assert.Contains(report.Checks, check =>
+            check.Signal == "interaction.renderedVideoFrameDelta" &&
+            check.FailureClass == PlaybackQualityFailureClassification.EvaluationHarnessBug);
+    }
+
+    [Fact]
     public void Serializer_RoundTrips_Report_With_CamelCase_Names()
     {
         var report = new PlaybackQualityReport

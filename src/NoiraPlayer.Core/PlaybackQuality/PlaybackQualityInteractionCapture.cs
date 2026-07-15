@@ -4,6 +4,55 @@ namespace NoiraPlayer.Core.PlaybackQuality
 {
     public static class PlaybackQualityInteractionCapture
     {
+        public static PlaybackQualityInteractionEvidence CreatePauseResume(
+            double requestedPauseDurationMs,
+            double actualPauseDurationMs,
+            double recoveryDurationMs,
+            long positionBeforeTicks,
+            long positionAfterTicks,
+            ulong decodedVideoFramesBefore,
+            ulong decodedVideoFramesAfter,
+            ulong renderedVideoFramesBefore,
+            ulong renderedVideoFramesAfter,
+            bool playbackFailed)
+        {
+            EnsureDuration(requestedPauseDurationMs, nameof(requestedPauseDurationMs));
+            EnsureDuration(actualPauseDurationMs, nameof(actualPauseDurationMs));
+            EnsureDuration(recoveryDurationMs, nameof(recoveryDurationMs));
+            if (positionBeforeTicks < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(positionBeforeTicks));
+            }
+
+            if (positionAfterTicks < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(positionAfterTicks));
+            }
+
+            return new PlaybackQualityInteractionEvidence
+            {
+                Scenario = PlaybackQualityExecutionScenario.PauseResume,
+                Attempted = true,
+                RequestedPauseDurationMs = requestedPauseDurationMs,
+                ActualPauseDurationMs = actualPauseDurationMs,
+                RecoveryDurationMs = recoveryDurationMs,
+                PositionBeforeTicks = positionBeforeTicks,
+                PositionAfterTicks = positionAfterTicks,
+                PositionDeltaTicks = positionAfterTicks - positionBeforeTicks,
+                DecodedVideoFramesBefore = decodedVideoFramesBefore,
+                DecodedVideoFramesAfter = decodedVideoFramesAfter,
+                DecodedVideoFrameDelta = NonNegativeDifference(
+                    decodedVideoFramesAfter,
+                    decodedVideoFramesBefore),
+                RenderedVideoFramesBefore = renderedVideoFramesBefore,
+                RenderedVideoFramesAfter = renderedVideoFramesAfter,
+                RenderedVideoFrameDelta = NonNegativeDifference(
+                    renderedVideoFramesAfter,
+                    renderedVideoFramesBefore),
+                PlaybackFailed = playbackFailed
+            };
+        }
+
         public static PlaybackQualityInteractionEvidence Create(
             string scenario,
             double operationDurationMs,
@@ -76,6 +125,11 @@ namespace NoiraPlayer.Core.PlaybackQuality
         private static ulong? Difference(ulong after, ulong before)
         {
             return after >= before ? after - before : (ulong?)null;
+        }
+
+        private static ulong NonNegativeDifference(ulong after, ulong before)
+        {
+            return after >= before ? after - before : 0;
         }
 
         private static void EnsureDuration(double value, string parameterName)

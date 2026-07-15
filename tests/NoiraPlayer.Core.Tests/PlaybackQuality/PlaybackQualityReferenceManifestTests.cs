@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System;
 using System.Linq;
 using NoiraPlayer.Core.Emby;
 using NoiraPlayer.Core.Playback;
@@ -318,6 +319,116 @@ public sealed class PlaybackQualityReferenceManifestTests
         Assert.Contains("interaction.cueRenderDurationMs", requiredSignals);
         Assert.Contains("interaction.renderedVideoFrameDelta", requiredSignals);
         Assert.Contains("interaction.subtitleCueRenderCountDelta", requiredSignals);
+    }
+
+    [Fact]
+    public void RequiredSignalPolicy_Requires_Structured_PauseResume_Evidence()
+    {
+        var referenceCase = CreateCase(
+            "lifecycle/long-pause-resume",
+            tier: 1,
+            purpose: "pause-resume");
+        referenceCase.ExecutionRequirement.Scenario = "pause-resume";
+        referenceCase.PauseSeconds = 30;
+
+        var requiredSignals = PlaybackQualityRequiredSignalPolicy.CreateRequiredSignals(referenceCase);
+
+        Assert.Contains("interaction.scenario", requiredSignals);
+        Assert.Contains("interaction.requestedPauseDurationMs", requiredSignals);
+        Assert.Contains("interaction.actualPauseDurationMs", requiredSignals);
+        Assert.Contains("interaction.recoveryDurationMs", requiredSignals);
+        Assert.Contains("interaction.positionBeforeTicks", requiredSignals);
+        Assert.Contains("interaction.positionAfterTicks", requiredSignals);
+        Assert.Contains("interaction.decodedVideoFramesBefore", requiredSignals);
+        Assert.Contains("interaction.decodedVideoFramesAfter", requiredSignals);
+        Assert.Contains("interaction.renderedVideoFramesBefore", requiredSignals);
+        Assert.Contains("interaction.renderedVideoFramesAfter", requiredSignals);
+        Assert.Contains("interaction.playbackFailed", requiredSignals);
+
+        var reportSignals = PlaybackQualitySignalCatalog.ReportSignals
+            .Select(signal => signal.Signal)
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var signal in requiredSignals.Where(signal => signal.StartsWith("interaction.", StringComparison.Ordinal)))
+        {
+            Assert.Contains(signal, reportSignals);
+        }
+    }
+
+    [Fact]
+    public void RequiredSignalPolicy_Treats_Observed_PauseResume_Failure_As_Evidence()
+    {
+        var report = new PlaybackQualityReport
+        {
+            Interaction = PlaybackQualityInteractionCapture.CreatePauseResume(
+                requestedPauseDurationMs: 1_000,
+                actualPauseDurationMs: 1_010,
+                recoveryDurationMs: 2_000,
+                positionBeforeTicks: 20_000_000,
+                positionAfterTicks: 20_000_000,
+                decodedVideoFramesBefore: 90,
+                decodedVideoFramesAfter: 90,
+                renderedVideoFramesBefore: 88,
+                renderedVideoFramesAfter: 88,
+                playbackFailed: true)
+        };
+
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(
+            report,
+            "interaction.positionDeltaTicks"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(
+            report,
+            "interaction.decodedVideoFrameDelta"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(
+            report,
+            "interaction.renderedVideoFrameDelta"));
+        Assert.True(PlaybackQualityRequiredSignalPolicy.HasReportSignal(
+            report,
+            "interaction.playbackFailed"));
+    }
+
+    [Fact]
+    public void RequiredSignalPolicy_Rejects_Inconsistent_PauseResume_Delta()
+    {
+        var report = new PlaybackQualityReport
+        {
+            Interaction = PlaybackQualityInteractionCapture.CreatePauseResume(
+                requestedPauseDurationMs: 1_000,
+                actualPauseDurationMs: 1_010,
+                recoveryDurationMs: 60,
+                positionBeforeTicks: 20_000_000,
+                positionAfterTicks: 21_000_000,
+                decodedVideoFramesBefore: 90,
+                decodedVideoFramesAfter: 93,
+                renderedVideoFramesBefore: 88,
+                renderedVideoFramesAfter: 91,
+                playbackFailed: false)
+        };
+        report.Interaction.RenderedVideoFrameDelta = 99;
+
+        Assert.False(PlaybackQualityRequiredSignalPolicy.HasReportSignal(
+            report,
+            "interaction.renderedVideoFrameDelta"));
+    }
+
+    [Fact]
+    public void ValidateReportSet_Rejects_PauseResume_Report_Without_Structured_Interaction()
+    {
+        var manifest = new PlaybackQualityReferenceManifest();
+        var referenceCase = CreateCase("lifecycle/pause-structured-evidence", 1, "pause-resume");
+        referenceCase.ExecutionRequirement.Scenario = PlaybackQualityExecutionScenario.PauseResume;
+        referenceCase.PauseSeconds = 1;
+        manifest.Cases.Add(referenceCase);
+        var report = CreateReport(referenceCase.CaseId, "hevc", 1920, 1080, 24, "Sdr");
+        report.Execution.Scenario = PlaybackQualityExecutionScenario.PauseResume;
+
+        var validation = PlaybackQualityReferenceReportSetValidator.Validate(manifest, new[] { report });
+
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "interaction.actualPauseDurationMs");
+        Assert.Contains(validation.Errors, error =>
+            error.Code == "report.requiredSignal.missing" &&
+            error.Signal == "interaction.decodedVideoFrameDelta");
     }
 
     [Fact]

@@ -584,6 +584,7 @@ public sealed class NativePlaybackGraphDecouplingContractTests
         Assert.Contains("renderedVideoFramesBeforePause", harnessSource, StringComparison.Ordinal);
         Assert.Contains("actualPauseDurationMs", harnessSource, StringComparison.Ordinal);
         Assert.Contains("resumeRecoveryDurationMs", harnessSource, StringComparison.Ordinal);
+        Assert.Contains("PlaybackQualityInteractionCapture.CreatePauseResume", harnessSource, StringComparison.Ordinal);
         Assert.Contains("options.Scenario == PlaybackQualityExecutionScenario.PauseResume", harnessSource, StringComparison.Ordinal);
         Assert.Contains("? \"resume\"", harnessSource, StringComparison.Ordinal);
     }

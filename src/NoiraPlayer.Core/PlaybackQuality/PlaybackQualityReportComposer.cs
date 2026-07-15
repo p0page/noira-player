@@ -51,7 +51,7 @@ namespace NoiraPlayer.Core.PlaybackQuality
 
     public sealed class PlaybackQualityRunResult
     {
-        public const string CurrentEvaluationVersion = "playback-quality-v0.19";
+        public const string CurrentEvaluationVersion = "playback-quality-v0.20";
 
         public PlaybackQualityRunResult(
             PlaybackQualityReport report,
@@ -162,6 +162,8 @@ namespace NoiraPlayer.Core.PlaybackQuality
                 {
                     Scenario = request.Interaction.Scenario,
                     Attempted = request.Interaction.Attempted,
+                    RequestedPauseDurationMs = request.Interaction.RequestedPauseDurationMs,
+                    ActualPauseDurationMs = request.Interaction.ActualPauseDurationMs,
                     OperationDurationMs = request.Interaction.OperationDurationMs,
                     LockWaitDurationMs = request.Interaction.LockWaitDurationMs,
                     ExecutionDurationMs = request.Interaction.ExecutionDurationMs,
@@ -176,10 +178,18 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     PacketCacheWindowDurationTicks = request.Interaction.PacketCacheWindowDurationTicks,
                     RecoveryDurationMs = request.Interaction.RecoveryDurationMs,
                     CueRenderDurationMs = request.Interaction.CueRenderDurationMs,
+                    PositionBeforeTicks = request.Interaction.PositionBeforeTicks,
+                    PositionAfterTicks = request.Interaction.PositionAfterTicks,
                     PositionDeltaTicks = request.Interaction.PositionDeltaTicks,
+                    DecodedVideoFramesBefore = request.Interaction.DecodedVideoFramesBefore,
+                    DecodedVideoFramesAfter = request.Interaction.DecodedVideoFramesAfter,
+                    DecodedVideoFrameDelta = request.Interaction.DecodedVideoFrameDelta,
+                    RenderedVideoFramesBefore = request.Interaction.RenderedVideoFramesBefore,
+                    RenderedVideoFramesAfter = request.Interaction.RenderedVideoFramesAfter,
                     SubmittedAudioFrameDelta = request.Interaction.SubmittedAudioFrameDelta,
                     RenderedVideoFrameDelta = request.Interaction.RenderedVideoFrameDelta,
-                    SubtitleCueRenderCountDelta = request.Interaction.SubtitleCueRenderCountDelta
+                    SubtitleCueRenderCountDelta = request.Interaction.SubtitleCueRenderCountDelta,
+                    PlaybackFailed = request.Interaction.PlaybackFailed
                 };
             }
 

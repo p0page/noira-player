@@ -22,7 +22,7 @@ public sealed class PlaybackQualitySeekLatencyContractTests
     [Fact]
     public void Current_Evaluation_Version_Includes_Explicit_Timeline_Target_Contract()
     {
-        Assert.Equal("playback-quality-v0.19", PlaybackQualityRunResult.CurrentEvaluationVersion);
+        Assert.Equal("playback-quality-v0.20", PlaybackQualityRunResult.CurrentEvaluationVersion);
         Assert.NotNull(typeof(PlaybackQualityExecutionEvidence).GetProperty("RequestedSampleDurationMs"));
         Assert.NotNull(typeof(PlaybackQualityExecutionEvidence).GetProperty("ObservedSampleWallClockDurationMs"));
     }

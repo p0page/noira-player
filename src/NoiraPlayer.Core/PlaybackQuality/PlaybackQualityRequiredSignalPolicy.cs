@@ -90,6 +90,20 @@ namespace NoiraPlayer.Core.PlaybackQuality
             {
                 AddUnique(requiredSignals, "lifecycle.pause");
                 AddUnique(requiredSignals, "lifecycle.resume");
+                AddUnique(requiredSignals, "interaction.scenario");
+                AddUnique(requiredSignals, "interaction.requestedPauseDurationMs");
+                AddUnique(requiredSignals, "interaction.actualPauseDurationMs");
+                AddUnique(requiredSignals, "interaction.recoveryDurationMs");
+                AddUnique(requiredSignals, "interaction.positionBeforeTicks");
+                AddUnique(requiredSignals, "interaction.positionAfterTicks");
+                AddUnique(requiredSignals, "interaction.positionDeltaTicks");
+                AddUnique(requiredSignals, "interaction.decodedVideoFramesBefore");
+                AddUnique(requiredSignals, "interaction.decodedVideoFramesAfter");
+                AddUnique(requiredSignals, "interaction.decodedVideoFrameDelta");
+                AddUnique(requiredSignals, "interaction.renderedVideoFramesBefore");
+                AddUnique(requiredSignals, "interaction.renderedVideoFramesAfter");
+                AddUnique(requiredSignals, "interaction.renderedVideoFrameDelta");
+                AddUnique(requiredSignals, "interaction.playbackFailed");
             }
 
             if (HasPurpose(referenceCase, "end-of-stream"))
@@ -507,11 +521,57 @@ namespace NoiraPlayer.Core.PlaybackQuality
                     return report.Source.DolbyVisionCompatibilityId.HasValue;
                 case "startup.startupDurationMs":
                     return report.Startup.StartupDurationMs > 0;
+                case "interaction.scenario":
+                    return report.Interaction.Attempted &&
+                        string.Equals(
+                            report.Interaction.Scenario,
+                            PlaybackQualityExecutionScenario.PauseResume,
+                            StringComparison.Ordinal);
+                case "interaction.requestedPauseDurationMs":
+                    return report.Interaction.Attempted &&
+                        HasFiniteNonNegative(report.Interaction.RequestedPauseDurationMs) &&
+                        report.Interaction.RequestedPauseDurationMs.GetValueOrDefault() > 0;
+                case "interaction.actualPauseDurationMs":
+                    return report.Interaction.Attempted &&
+                        HasFiniteNonNegative(report.Interaction.ActualPauseDurationMs) &&
+                        report.Interaction.ActualPauseDurationMs.GetValueOrDefault() > 0;
                 case "interaction.recoveryDurationMs":
                     return report.Interaction.Attempted &&
                         report.Interaction.RecoveryDurationMs.HasValue &&
                         double.IsFinite(report.Interaction.RecoveryDurationMs.Value) &&
                         report.Interaction.RecoveryDurationMs.Value >= 0;
+                case "interaction.positionBeforeTicks":
+                    return report.Interaction.Attempted &&
+                        report.Interaction.PositionBeforeTicks.HasValue &&
+                        report.Interaction.PositionBeforeTicks.Value >= 0;
+                case "interaction.positionAfterTicks":
+                    return report.Interaction.Attempted &&
+                        report.Interaction.PositionAfterTicks.HasValue &&
+                        report.Interaction.PositionAfterTicks.Value >= 0;
+                case "interaction.decodedVideoFramesBefore":
+                    return report.Interaction.Attempted &&
+                        report.Interaction.DecodedVideoFramesBefore.HasValue;
+                case "interaction.decodedVideoFramesAfter":
+                    return report.Interaction.Attempted &&
+                        report.Interaction.DecodedVideoFramesAfter.HasValue;
+                case "interaction.decodedVideoFrameDelta":
+                    return IsPauseResume(report.Interaction)
+                        ? HasConsistentPauseFrameDelta(
+                            report.Interaction.DecodedVideoFramesBefore,
+                            report.Interaction.DecodedVideoFramesAfter,
+                            report.Interaction.DecodedVideoFrameDelta)
+                        : report.Interaction.Attempted &&
+                            report.Interaction.DecodedVideoFrameDelta.HasValue &&
+                            report.Interaction.DecodedVideoFrameDelta.Value > 0;
+                case "interaction.renderedVideoFramesBefore":
+                    return report.Interaction.Attempted &&
+                        report.Interaction.RenderedVideoFramesBefore.HasValue;
+                case "interaction.renderedVideoFramesAfter":
+                    return report.Interaction.Attempted &&
+                        report.Interaction.RenderedVideoFramesAfter.HasValue;
+                case "interaction.playbackFailed":
+                    return report.Interaction.Attempted &&
+                        report.Interaction.PlaybackFailed.HasValue;
                 case "interaction.operationDurationMs":
                     return report.Interaction.Attempted &&
                         report.Interaction.OperationDurationMs.HasValue &&
@@ -553,17 +613,24 @@ namespace NoiraPlayer.Core.PlaybackQuality
                         double.IsFinite(report.Interaction.CueRenderDurationMs.Value) &&
                         report.Interaction.CueRenderDurationMs.Value >= 0;
                 case "interaction.positionDeltaTicks":
-                    return report.Interaction.Attempted &&
-                        report.Interaction.PositionDeltaTicks.HasValue &&
-                        report.Interaction.PositionDeltaTicks.Value > 0;
+                    return IsPauseResume(report.Interaction)
+                        ? HasConsistentPausePositionDelta(report.Interaction)
+                        : report.Interaction.Attempted &&
+                            report.Interaction.PositionDeltaTicks.HasValue &&
+                            report.Interaction.PositionDeltaTicks.Value > 0;
                 case "interaction.submittedAudioFrameDelta":
                     return report.Interaction.Attempted &&
                         report.Interaction.SubmittedAudioFrameDelta.HasValue &&
                         report.Interaction.SubmittedAudioFrameDelta.Value > 0;
                 case "interaction.renderedVideoFrameDelta":
-                    return report.Interaction.Attempted &&
-                        report.Interaction.RenderedVideoFrameDelta.HasValue &&
-                        report.Interaction.RenderedVideoFrameDelta.Value > 0;
+                    return IsPauseResume(report.Interaction)
+                        ? HasConsistentPauseFrameDelta(
+                            report.Interaction.RenderedVideoFramesBefore,
+                            report.Interaction.RenderedVideoFramesAfter,
+                            report.Interaction.RenderedVideoFrameDelta)
+                        : report.Interaction.Attempted &&
+                            report.Interaction.RenderedVideoFrameDelta.HasValue &&
+                            report.Interaction.RenderedVideoFrameDelta.Value > 0;
                 case "interaction.subtitleCueRenderCountDelta":
                     return report.Interaction.Attempted &&
                         report.Interaction.SubtitleCueRenderCountDelta.HasValue &&
@@ -1046,6 +1113,38 @@ namespace NoiraPlayer.Core.PlaybackQuality
         private static bool HasFiniteNonNegative(double? value)
         {
             return value.HasValue && double.IsFinite(value.Value) && value.Value >= 0;
+        }
+
+        private static bool IsPauseResume(PlaybackQualityInteractionEvidence interaction)
+        {
+            return interaction.Attempted && string.Equals(
+                interaction.Scenario,
+                PlaybackQualityExecutionScenario.PauseResume,
+                StringComparison.Ordinal);
+        }
+
+        private static bool HasConsistentPausePositionDelta(
+            PlaybackQualityInteractionEvidence interaction)
+        {
+            return interaction.PositionBeforeTicks.HasValue &&
+                interaction.PositionAfterTicks.HasValue &&
+                interaction.PositionDeltaTicks.HasValue &&
+                interaction.PositionDeltaTicks.Value ==
+                    interaction.PositionAfterTicks.Value - interaction.PositionBeforeTicks.Value;
+        }
+
+        private static bool HasConsistentPauseFrameDelta(
+            ulong? before,
+            ulong? after,
+            ulong? delta)
+        {
+            if (!before.HasValue || !after.HasValue || !delta.HasValue)
+            {
+                return false;
+            }
+
+            var expected = after.Value >= before.Value ? after.Value - before.Value : 0;
+            return delta.Value == expected;
         }
 
         private static void AddUnique(List<string> values, string value)
