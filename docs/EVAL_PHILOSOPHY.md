@@ -8,6 +8,8 @@ seek 调用耗时、首帧恢复耗时和落点误差回答的是不同问题，
 
 正常 CPU、磁盘和网络抖动属于真实运行分布，应通过同一 manifest 的重复样本和 transport/stage 证据解释。只有明确的并行播放或人为持续高负载才构成不可归因干扰。单次快慢不能直接驱动 Core 策略修改，也不能被静默删除。
 
+报告中的 source revision 必须标识实际被测 player/native 版本，而不是启动命令时碰巧所在目录的 HEAD。跨 worktree 运行必须显式传递版本身份；版本无法可靠确定时应报告证据不足，不能猜测或沿用相邻运行。
+
 ## 2026-07-13 补充原则
 
 seek cache 的开关、命中、包数、字节数、窗口和 fallback reason 属于解释 seek 结果的上下文证据，不是独立质量分数。cache hit 时必须以 `seekDemuxTargetTicks = -1` 证明没有发生 demux seek；cache miss 时必须保留具体 fallback reason。评测不得把“开启 cache”本身算作改善，也不得因 cache 容量自然波动自动判定回归。

@@ -5447,7 +5447,6 @@ try {
     $expectedMissingPurposes = @(
         'cadence-23.976',
         'av-sync',
-        'timeline',
         'tracks',
         'subtitles',
         'end-of-stream',

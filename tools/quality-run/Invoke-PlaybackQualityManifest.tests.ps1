@@ -13,6 +13,7 @@ try {
     $reportsDir = Join-Path $tempRoot 'reports'
     $summaryPath = Join-Path $tempRoot 'summary.json'
     $invocationLog = Join-Path $tempRoot 'invocations.txt'
+    $revisionLog = Join-Path $tempRoot 'revisions.txt'
     $fakeHarness = Join-Path $tempRoot 'fake-harness.ps1'
     $fakeResolver = Join-Path $tempRoot 'fake-resolver.ps1'
     $resolverState = Join-Path $tempRoot 'resolver-state.txt'
@@ -282,6 +283,7 @@ $referenceEvidence = if ($null -eq $referenceCase) {
     'reference=' + $referenceCase.caseId + ',' + $referenceCase.category + ',' + $referenceCase.severity + ',' + $referenceCase.stability + ',' + $referenceCase.expected.hdrKind
 }
 Add-Content -LiteralPath $logPath -Value ($caseId + '|pause=' + $pauseSeconds + '|start=' + $startPositionTicks + '|seek=' + $seekTargetPositionTicks + '|scenario=' + $scenario + '|stream=' + $streamUrl + '|locator=' + $locatorHash + '|seekCache=' + $seekPacketCacheEnabled.ToString().ToLowerInvariant() + '|' + $referenceEvidence) -Encoding UTF8
+Add-Content -LiteralPath $env:NOIRAPLAYER_MANIFEST_RUNNER_TEST_REVISION_LOG -Value $env:NOIRAPLAYER_SOURCE_REVISION -Encoding UTF8
 
 $reportPath = Join-Path $reportsDir ($caseId.Replace('/', [System.IO.Path]::DirectorySeparatorChar) + '.json')
 if ($caseId -like '*stale-pass-must-not-survive') {
@@ -344,6 +346,7 @@ exit 0
 '@ | Set-Content -LiteralPath $fakeResolver -Encoding UTF8
 
     $env:NOIRAPLAYER_MANIFEST_RUNNER_TEST_LOG = $invocationLog
+    $env:NOIRAPLAYER_MANIFEST_RUNNER_TEST_REVISION_LOG = $revisionLog
     $env:NOIRAPLAYER_MANIFEST_RESOLVER_TEST_STATE = $resolverState
     $staleReportPath = Join-Path $reportsDir 'runner\stale-pass-must-not-survive.json'
     New-Item -ItemType Directory -Path (Split-Path -Parent $staleReportPath) -Force | Out-Null
@@ -365,6 +368,7 @@ exit 0
         -SourceResolverScriptPath $fakeResolver `
         -RuntimeSourceMapPath $runtimeSourceMapPath `
         -EnableSeekPacketCache `
+        -SourceRevision 'runner-test-revision' `
         -SummaryPath $summaryPath
     $runnerExitCode = $LASTEXITCODE
 
@@ -373,6 +377,11 @@ exit 0
     }
 
     $invocations = @(Get-Content -LiteralPath $invocationLog -Encoding UTF8)
+    $revisions = @(Get-Content -LiteralPath $revisionLog -Encoding UTF8)
+    if ($revisions.Count -ne 9 -or
+        @($revisions | Where-Object { $_ -ne 'runner-test-revision' }).Count -ne 0) {
+        throw 'Manifest runner must inject the requested source revision into every native attempt.'
+    }
     $sha256 = [Security.Cryptography.SHA256]::Create()
     try {
         $locatorBytes = [Text.Encoding]::UTF8.GetBytes('https://media.invalid/second.mp4')
@@ -449,6 +458,7 @@ exit 0
 
     $summary = Get-Content -LiteralPath $summaryPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($summary.runnerVersion -ne 'native-manifest-runner-v0.4' -or
+        $summary.sourceRevision -ne 'runner-test-revision' -or
         $summary.selectedCaseCount -ne 11 -or
         $summary.attemptedCaseCount -ne 9 -or
         $summary.reportCount -ne 10 -or

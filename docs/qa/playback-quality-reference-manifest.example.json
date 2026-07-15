@@ -105,6 +105,55 @@
       }
     },
     {
+      "caseId": "jellyfin/hdr10-http-timeline-10s",
+      "category": "challenge",
+      "severity": "high",
+      "stability": "variable",
+      "uri": "https://repo.jellyfin.org/test-videos/HDR/HDR10/HEVC/Test%20Jellyfin%201080p%20HEVC%20HDR10%2010M.mp4",
+      "startPositionTicks": 0,
+      "seekTargetPositionTicks": 100000000,
+      "tier": 2,
+      "executionRequirement": { "minimumEvidenceLevel": "native-playback", "scenario": "timeline" },
+      "purpose": [
+        "timeline",
+        "http-seek",
+        "seek-responsiveness"
+      ],
+      "expected": {
+        "codec": "hevc",
+        "width": 1920,
+        "height": 1080,
+        "frameRate": 60.0,
+        "hdrKind": "Hdr10",
+        "videoRange": "HDR10",
+        "colorPrimaries": "bt2020",
+        "colorTransfer": "smpte2084",
+        "colorSpace": "bt2020nc",
+        "isHdr": true,
+        "isDirectPlayable": true,
+        "hdrOutput": "Hdr10",
+        "dxgiInput": "YCBCR_STUDIO_G2084_TOPLEFT_P2020",
+        "dxgiOutput": "RGB_FULL_G2084_NONE_P2020",
+        "sdrDisplayFallback": {
+          "hdrOutput": "Sdr",
+          "dxgiInputAnyOf": [
+            "YCBCR_STUDIO_G22_LEFT_P2020",
+            "YCBCR_STUDIO_G22_TOPLEFT_P2020"
+          ],
+          "dxgiOutput": "RGB_FULL_G22_NONE_P709",
+          "requireValidatedConversion": true,
+          "requiredConversionStatus": "tone-mapped-hable"
+        },
+        "maxStartupDurationMs": 7000.0,
+        "maxSeekPositionErrorMs": 500.0,
+        "maxSeekRecoveryDurationMs": 5000.0,
+        "maxVideoStarvedPasses": 0,
+        "maxAudioStarvedPasses": 0,
+        "requireValidatedConversion": true,
+        "requireMatchedDisplayRefreshRate": false
+      }
+    },
+    {
       "caseId": "jellyfin/hdr10-hevc-main10-1080p60-10m-force-sdr",
       "category": "challenge",
       "severity": "high",

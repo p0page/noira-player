@@ -264,7 +264,9 @@ $manifestRunnerArguments = @(
     '-DurationSeconds',
     ([string]$DurationSeconds),
     '-AttemptTimeoutSeconds',
-    ([string]$AttemptTimeoutSeconds)
+    ([string]$AttemptTimeoutSeconds),
+    '-SourceRevision',
+    $baselineSourceRevision
 )
 if (-not [string]::IsNullOrWhiteSpace($ManifestRunnerHarnessScriptPath)) {
     $manifestRunnerArguments += @(

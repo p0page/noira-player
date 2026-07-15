@@ -2,6 +2,14 @@
 
 播放质量评测体系正在推进 v0.1，目标是先把评测做成可信裁判，而不是优化播放效果。
 
+## 2026-07-15 更新：远程 seek 不再同步等待首个解码帧
+
+v0.21 阶段证据在公开 Jellyfin HDR10/HEVC HTTP timeline case 上定位到：旧 `PlaybackGraph::Seek` 的媒体重定位仅约 `0.02-0.06ms`，但 mutation 后的 decode worker restart 会同步等待队列首帧，令 seek 调用随网络抖动阻塞约 `0.9-4.7s`。缓存命中时同一路径稳定在约 `15ms`，进一步排除了 graph 锁和 `av_seek_frame` 本身。Kodi、VLC 和 mpv 都把 seek 交给播放器/input/demux 工作线程处理，调用方不以首个解码帧作为命令返回条件。
+
+Core 现在只在初次 open 时等待独立解码 worker 就绪；seek、音轨切换和字幕切换后的 worker restart 仅启动后台解码，首帧恢复仍由 `seekRecoveryDurationMs` 和实际落点独立判定。使用同一 `playback-quality-v0.21` manifest 交错运行的两组正式报告中，旧提交 `a568d9d` 的 seek 调用为 `1022.66ms`、`2007.88ms`，候选 `c2eb50e` 为 `0.5354ms`、`0.5406ms`；四次均落点误差 `0ms`、继续推进且最终 pass。首帧恢复保留真实网络方差，不能据此宣称网络加载已优化。
+
+公开 reference corpus 新增 `jellyfin/hdr10-http-timeline-10s` challenge case，确保默认样本真实覆盖 HTTP seek，而不是只列出 HDR URI。另修复 manifest runner 的版本归因：每次 native attempt 现在显式继承 runner 所属 worktree 的 source revision，summary 同步保存该值；跨 worktree 调用不再错误使用调用者当前目录的 HEAD。完整 native-headless smoke、Core `1160/1160` 和 Modern App Debug x64 构建均通过。
+
 ## 2026-07-15 更新：v0.21 将 seek 总耗时拆为可归因阶段
 
 评测契约升级为 `playback-quality-v0.21`。timeline/seek case 除调用返回耗时和首帧恢复耗时外，现在还必须记录 graph 锁等待、解码 worker 静默、seek replay 判定、状态重置、媒体重定位、其余解码器清理、首帧预卷渲染和 worker 重启九段非负耗时。缺少任一字段都会被 native parser、required-signal policy、evaluator 和模型分析判为证据不足，不能继续只凭一个总耗时推测网络、锁或解码器问题。相同字段已贯通 native-headless 与完整 App-hosted 路径，并进入 baseline/candidate 逐信号比较。

@@ -1557,3 +1557,15 @@ baseline 必须在 materialize 前检查 runner summary 的版本、缺失报告
 原因：旧报告只能证明 seek 很慢，不能判断耗时来自网络 `av_seek_frame`、graph 争用、解码器清理还是 worker 生命周期。正常机器和网络抖动会保留在同 manifest 重复分布中，阶段证据用于归因而不是删除异常值。评测器版本变化后必须重新建立 v0.21 baseline，不能与 v0.20 静默比较。
 
 进度条问题不整体归入 Core。Core 对逻辑 timeline、实际 seek、首帧落点和后续推进负责；App 对所选源 duration、进度条比例和实际位置呈现负责。只有 v0.21 证据证明 native timeline 或 seek 失败时才调整 Core；App 映射问题应以 App-hosted case 独立修复，避免把界面错误优化进解码链路。
+
+# 2026-07-15: mutation 后的 decode worker restart 不等待首帧
+
+决策：首次打开媒体仍允许 `StartVideoDecodeWorker` 等待 worker ready，以保证 open 的首帧合同；seek、音轨切换和字幕切换完成 graph mutation 后，只启动独立 decode worker，不在持有 graph mutex 时等待队列首帧。命令返回速度与首帧恢复速度继续作为两个独立信号，不能因 seek 调用快速返回就判定恢复成功。
+
+原因：v0.21 真实 HTTP 证据证明同步等待把网络首包耗时错误地纳入 `Seek()`，导致 Core 后台命令和同锁控制被阻塞；缓存命中对照则排除了锁、reposition 和 decoder flush。该边界与 Kodi player message、VLC input control queue、mpv queued demux seek 的成熟模式一致，同时避免本阶段引入完整命令队列重构。
+
+# 2026-07-15: native manifest runner 必须显式绑定源码版本
+
+决策：`Invoke-PlaybackQualityManifest.ps1` 接受可选 `SourceRevision`；未提供时只从脚本所属 `repoRoot` 解析 HEAD 和 dirty 状态，随后通过 `NOIRAPLAYER_SOURCE_REVISION` 注入所有 native/error attempt，并把同一值写入 runner summary。`New-PlaybackCoreTuningBaseline.ps1` 必须把已经解析的 baseline revision 显式传给 runner。
+
+原因：从候选 worktree 调用基线 runner 时，Headless 曾按进程当前目录写入候选 HEAD，导致真实旧 helper 的报告被错误标成新版本。错误 provenance 会使 baseline/candidate 比较失去可信度，因此这属于 eval harness bug，相关交错报告已作废并在修复后重跑。

@@ -11,6 +11,7 @@ param(
     [string]$HarnessScriptPath = '',
     [string[]]$CaseId = @(),
     [string[]]$Category = @('stable', 'challenge'),
+    [string]$SourceRevision = '',
     [switch]$EnableSeekPacketCache,
     [int]$DurationSeconds = 10,
     [int]$AttemptTimeoutSeconds = 60
@@ -22,6 +23,21 @@ $global:LASTEXITCODE = 0
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $modulePath = Join-Path $PSScriptRoot 'NativeHeadlessHarness.psm1'
 Import-Module $modulePath -Force
+
+$resolvedSourceRevision = $SourceRevision.Trim()
+if ([string]::IsNullOrWhiteSpace($resolvedSourceRevision)) {
+    $resolvedSourceRevision = (& git -C $repoRoot rev-parse --short HEAD 2>$null).Trim()
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($resolvedSourceRevision)) {
+        $resolvedSourceRevision = 'unknown-source-revision'
+    }
+    else {
+        $sourceStatus = @(& git -C $repoRoot status --porcelain)
+        if ($LASTEXITCODE -eq 0 -and $sourceStatus.Count -gt 0) {
+            $resolvedSourceRevision += '-dirty'
+        }
+    }
+}
+$env:NOIRAPLAYER_SOURCE_REVISION = $resolvedSourceRevision
 
 function Get-PlaybackQualityReportResult([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path)) {
@@ -383,6 +399,7 @@ $summary = [ordered]@{
     runnerVersion = 'native-manifest-runner-v0.4'
     durationSeconds = $DurationSeconds
     attemptTimeoutSeconds = $AttemptTimeoutSeconds
+    sourceRevision = $resolvedSourceRevision
     seekPacketCacheEnabled = [bool]$EnableSeekPacketCache
     selectedCaseCount = $selectedCases.Count
     attemptedCaseCount = @($attempts | Where-Object { $_.status -ne 'unresolved-source' }).Count
