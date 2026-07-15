@@ -31,6 +31,9 @@ namespace
         bool GraphPaused{true};
         bool AudioStarted{true};
         bool AudioPaused{true};
+        bool RebasePlayback{true};
+        uint32_t SeekVideoCount{0};
+        uint32_t FlushAudioCount{0};
 
         SubtitleSwitchOperations Operations()
         {
@@ -56,12 +59,18 @@ namespace
             {
                 return DecoderSelection;
             };
+            operations.ShouldRebasePlayback = [this]
+            {
+                return RebasePlayback;
+            };
             operations.SeekVideo = [this]
             {
+                ++SeekVideoCount;
                 ThrowTargetFault(FaultStage::Seek);
             };
             operations.FlushAudioDecoder = [this]
             {
+                ++FlushAudioCount;
                 ThrowTargetFault(FaultStage::FlushAudio);
             };
             operations.FlushSubtitleDecoder = [this]
@@ -142,6 +151,22 @@ int main()
         assert(result.RestoreFailure == nullptr);
         assert(harness.DecoderSelection == 2);
         assert(harness.RendererSelection == 2);
+        AssertLifecycleUnchanged(harness);
+    }
+
+    {
+        Harness harness;
+        harness.RebasePlayback = false;
+
+        auto result = RunSubtitleSwitchTransaction(1, 2, harness.Operations());
+
+        assert(result.Disposition == SubtitleSwitchDisposition::Completed);
+        assert(result.SwitchFailure == nullptr);
+        assert(result.RestoreFailure == nullptr);
+        assert(harness.DecoderSelection == 2);
+        assert(harness.RendererSelection == 2);
+        assert(harness.SeekVideoCount == 0);
+        assert(harness.FlushAudioCount == 0);
         AssertLifecycleUnchanged(harness);
     }
 

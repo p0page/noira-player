@@ -4643,6 +4643,14 @@ try {
   ]
 }
 '@ | Set-Content -LiteralPath (Join-Path $candidateEvaluationInvalidCandidateDir 'candidate-wrong-source.json') -Encoding UTF8
+    Set-SmokeNativeExecutionEvidence `
+        -Path (Join-Path $candidateEvaluationInvalidCandidateDir 'candidate-wrong-source.json') `
+        -Locator 'https://example.invalid/item-1/source-1.mp4' `
+        -AttemptId 'invalid-source-candidate-attempt' `
+        -Status 'completed' `
+        -Scenario 'timeline' `
+        -SourceOpened $true `
+        -PlaybackSampleObserved $true
     Copy-Item -LiteralPath (Join-Path $runIdCandidateDir 'error-candidate.json') -Destination (Join-Path $candidateEvaluationInvalidCandidateDir 'error-candidate.json')
     Copy-Item -LiteralPath $endOfStreamCandidatePath -Destination (Join-Path $candidateEvaluationInvalidCandidateDir 'end-of-stream-candidate.json')
 

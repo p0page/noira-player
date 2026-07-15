@@ -20,6 +20,7 @@ namespace winrt::NoiraPlayer::Native::implementation
         std::function<void()> DisableSelection;
         std::function<void(int32_t)> OpenDecoder;
         std::function<std::optional<int32_t>()> SelectedDecoderStream;
+        std::function<bool()> ShouldRebasePlayback;
         std::function<void()> SeekVideo;
         std::function<void()> FlushAudioDecoder;
         std::function<void()> FlushSubtitleDecoder;
@@ -52,8 +53,11 @@ namespace winrt::NoiraPlayer::Native::implementation
                 throw std::runtime_error("Subtitle decoder did not select the requested stream.");
             }
 
-            operations.SeekVideo();
-            operations.FlushAudioDecoder();
+            if (operations.ShouldRebasePlayback())
+            {
+                operations.SeekVideo();
+                operations.FlushAudioDecoder();
+            }
             operations.FlushSubtitleDecoder();
             operations.SelectRenderer(selection.value());
         };

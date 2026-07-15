@@ -534,6 +534,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         {
             return m_subtitleDecoder.SelectedStreamIndex();
         };
+        operations.ShouldRebasePlayback = [this]
+        {
+            return !m_switchPacketCacheEnabled;
+        };
         operations.SeekVideo = [this, resumePositionTicks, &timing, &useSwitchPacketCache]
         {
             if (useSwitchPacketCache)
@@ -570,7 +574,10 @@ namespace winrt::NoiraPlayer::Native::implementation
         operations.SelectRenderer = [this, resumePositionTicks, &timing](int32_t streamIndex)
         {
             auto const startedAt = std::chrono::steady_clock::now();
-            SetVideoPrerollTarget(resumePositionTicks);
+            if (!m_switchPacketCacheEnabled)
+            {
+                SetVideoPrerollTarget(resumePositionTicks);
+            }
             m_subtitleRenderer.SwitchStream(streamIndex);
             timing.RendererOpenDurationMs += std::chrono::duration<double, std::milli>(
                 std::chrono::steady_clock::now() - startedAt).count();
