@@ -290,7 +290,7 @@ if (-not (Test-Path -LiteralPath $manifestRunSummaryPath)) {
 }
 $manifestRunSummary = Read-JsonFile $manifestRunSummaryPath
 $manifestRunnerVersion = ([string]$manifestRunSummary.runnerVersion).Trim()
-if ($manifestRunnerVersion -ne 'native-manifest-runner-v0.3') {
+if ($manifestRunnerVersion -ne 'native-manifest-runner-v0.4') {
     throw ('Unsupported native manifest runner summary version: ' + $manifestRunnerVersion)
 }
 if ([int]$manifestRunSummary.durationSeconds -ne $DurationSeconds -or

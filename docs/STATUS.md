@@ -1482,3 +1482,11 @@ commit `1c965fa` 上的最终 v0.18 基线已完成，ignored 路径为 `docs/qa
 `native-manifest-runner-v0.3` 现在只对 `emby-request-failed`、测试用 `transient-request-failed` 和无细分错误的 `resolver-failed` 做最多 6 次指数退避，等待依次为 250、500、1000、2000、4000ms；`media-source-not-found` 等永久错误立即停止。summary 继续记录真实 `sourceResolutionAttemptCount`，恢复后才调用 native harness；预算耗尽仍写 orchestration error、保持 unresolved，并使整轮非零退出和 strict baseline 无效。该策略用于容忍正常短时服务抖动，不会把缺失源或未执行 case 冒充播放证据。
 
 TDD 回归覆盖“前 3 次解析失败、第 4 次恢复”和永久错误首轮停止；manifest runner 测试通过，Core 全量 `1158/1158` 通过。baseline 合同正向路径已用 runner v0.3 生成并严格验证有效；该 PowerShell 测试文件的既有嵌套负例在当前 Codex PTY 中仍返回未定义退出码，因此不记作完整脚本全绿。播放器行为、报告 schema 和评价规则均未改变，下一步在提交后的干净 commit 上重新执行同 manifest 重复基线。
+
+# 2026-07-15 更新：manifest runner v0.4 按唯一 Emby 源预解析并在内存复用
+
+commit `44cfc3c` 的 v0.3 复跑再次被严格拒绝：36 份报告齐全，但 19 个外部 case 中仅 16 个进入 native，3 个 native attempt 失败，另有 3 个 Emby case unresolved。审计发现 13 个私有 case 实际只对应 4 个唯一 `itemId + mediaSourceId`，旧 runner 却在每个 case 前重新认证并请求 PlaybackInfo。后段 unresolved 中，一个媒体源早先已经成功解析；另两个 case 共用同一媒体源。重复 API 请求扩大了长跑期间的外部故障窗口，该轮只能作为无效诊断证据，不能用于 Core baseline/candidate 结论。
+
+`native-manifest-runner-v0.4` 现在在外部播放开始前按唯一 Emby 源执行预解析，并只在当前进程内保存结果。后续 case 复用同一 direct-stream URL，不把 URL、访问令牌或缓存 key 写入 summary；每个 attempt 显式记录 `sourceResolutionAttemptCount` 和 `sourceResolutionCacheHit`，顶层记录唯一源数、成功唯一源数和缓存命中数。预解析失败会被同源 case 共享为 orchestration error，仍然产生 unresolved 并使 strict baseline 无效，不能以缓存冒充 native 播放。
+
+TDD 新增相同源复用 case，验证 resolver 对该源只执行一次有界解析、两个 native case 各自拥有独立 attempt id，且敏感 URL/token 不进入 summary。manifest runner 测试通过，baseline 正向合同使用 v0.4 严格验证有效，Core 全量 `1158/1158` 通过；既有 PowerShell 嵌套负例的 PTY 退出码限制仍单独保留。下一步必须在 v0.4 的干净 commit 上重建重复基线，不能修补 v0.3 的无效 artifact。

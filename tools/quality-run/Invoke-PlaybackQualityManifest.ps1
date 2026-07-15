@@ -154,6 +154,38 @@ $selectedCases = @($manifest.cases | Where-Object {
 New-Item -ItemType Directory -Path $ReportsDir -Force | Out-Null
 $attempts = [System.Collections.Generic.List[object]]::new()
 $resolvedSourceCount = 0
+$embySourceResolutionCache = @{}
+
+foreach ($case in $selectedCases) {
+    $currentCaseId = ([string]$case.caseId).Trim()
+    $sourceLocator = ([string]$case.uri).Trim()
+    $runtimeOverride = if ($null -eq $runtimeSourceMap) {
+        $null
+    }
+    else {
+        $runtimeSourceMap.PSObject.Properties[$currentCaseId]
+    }
+    if ($null -ne $runtimeOverride -or
+        -not $sourceLocator.StartsWith('emby://', [System.StringComparison]::OrdinalIgnoreCase)) {
+        continue
+    }
+
+    $sourceResolutionKey = [Convert]::ToBase64String(
+        [Text.Encoding]::UTF8.GetBytes(
+            ([string]$case.itemId) + "`n" + ([string]$case.mediaSourceId)))
+    if ($embySourceResolutionCache.ContainsKey($sourceResolutionKey)) {
+        continue
+    }
+
+    $embySourceResolutionCache[$sourceResolutionKey] = [pscustomobject]@{
+        result = Resolve-PlaybackQualityEmbySource `
+            -ItemId ([string]$case.itemId) `
+            -MediaSourceId ([string]$case.mediaSourceId) `
+            -ResolverProjectPath $SourceResolverProjectPath `
+            -ResolverScriptPath $SourceResolverScriptPath
+        consumerCount = 0
+    }
+}
 
 foreach ($case in $selectedCases) {
     $currentCaseId = ([string]$case.caseId).Trim()
@@ -172,6 +204,7 @@ foreach ($case in $selectedCases) {
     }
     $startedAt = [DateTimeOffset]::UtcNow
     $sourceResolutionAttemptCount = 0
+    $sourceResolutionCacheHit = $false
 
     $runtimeOverride = if ($null -eq $runtimeSourceMap) {
         $null
@@ -186,11 +219,16 @@ foreach ($case in $selectedCases) {
 
     if ($null -eq $runtimeOverride -and
         $sourceLocator.StartsWith('emby://', [System.StringComparison]::OrdinalIgnoreCase)) {
-        $resolvedSource = Resolve-PlaybackQualityEmbySource `
-            -ItemId ([string]$case.itemId) `
-            -MediaSourceId ([string]$case.mediaSourceId) `
-            -ResolverProjectPath $SourceResolverProjectPath `
-            -ResolverScriptPath $SourceResolverScriptPath
+        $sourceResolutionKey = [Convert]::ToBase64String(
+            [Text.Encoding]::UTF8.GetBytes(
+                ([string]$case.itemId) + "`n" + ([string]$case.mediaSourceId)))
+        $cachedResolution = $embySourceResolutionCache[$sourceResolutionKey]
+        if ($null -eq $cachedResolution) {
+            throw ('Preflight Emby source resolution evidence is missing for case ' + $currentCaseId)
+        }
+        $sourceResolutionCacheHit = [int]$cachedResolution.consumerCount -gt 0
+        $cachedResolution.consumerCount = [int]$cachedResolution.consumerCount + 1
+        $resolvedSource = $cachedResolution.result
         $sourceResolutionAttemptCount = [int]$resolvedSource.AttemptCount
         if ($resolvedSource.Succeeded) {
             $streamUrl = $resolvedSource.StreamUrl
@@ -213,6 +251,7 @@ foreach ($case in $selectedCases) {
                 durationMs = 0
                 errorCode = $resolvedSource.ErrorCode
                 sourceResolutionAttemptCount = $sourceResolutionAttemptCount
+                sourceResolutionCacheHit = $sourceResolutionCacheHit
             })
             continue
         }
@@ -237,6 +276,7 @@ foreach ($case in $selectedCases) {
             durationMs = 0
             errorCode = $errorCode
             sourceResolutionAttemptCount = 0
+            sourceResolutionCacheHit = $false
         })
         continue
     }
@@ -250,6 +290,7 @@ foreach ($case in $selectedCases) {
             reportResult = Get-PlaybackQualityReportResult $reportPath
             durationMs = 0
             sourceResolutionAttemptCount = $sourceResolutionAttemptCount
+            sourceResolutionCacheHit = $sourceResolutionCacheHit
         })
         continue
     }
@@ -315,6 +356,7 @@ foreach ($case in $selectedCases) {
         reportAttemptMatched = $reportAttemptMatched
         durationMs = [Math]::Max(0, ([DateTimeOffset]::UtcNow - $startedAt).TotalMilliseconds)
         sourceResolutionAttemptCount = $sourceResolutionAttemptCount
+        sourceResolutionCacheHit = $sourceResolutionCacheHit
     })
 }
 
@@ -334,9 +376,11 @@ $errorReportCount = @($attempts | Where-Object reportResult -eq 'error').Count
 $skipReportCount = @($attempts | Where-Object reportResult -eq 'skip').Count
 $unsupportedReportCount = @($attempts | Where-Object reportResult -eq 'unsupported').Count
 $unknownReportCount = @($attempts | Where-Object reportResult -eq 'unknown').Count
+$uniqueResolvedSourceCount = @($embySourceResolutionCache.Values | Where-Object { $_.result.Succeeded }).Count
+$sourceResolutionCacheHitCount = @($attempts | Where-Object { $_.sourceResolutionCacheHit -eq $true }).Count
 $summary = [ordered]@{
     schemaVersion = 1
-    runnerVersion = 'native-manifest-runner-v0.3'
+    runnerVersion = 'native-manifest-runner-v0.4'
     durationSeconds = $DurationSeconds
     attemptTimeoutSeconds = $AttemptTimeoutSeconds
     seekPacketCacheEnabled = [bool]$EnableSeekPacketCache
@@ -347,6 +391,9 @@ $summary = [ordered]@{
     invalidReportCount = $invalidReportCount
     unresolvedSourceCount = $unresolvedSourceCount
     resolvedSourceCount = $resolvedSourceCount
+    uniqueSourceResolutionCount = $embySourceResolutionCache.Count
+    uniqueResolvedSourceCount = $uniqueResolvedSourceCount
+    sourceResolutionCacheHitCount = $sourceResolutionCacheHitCount
     reportCount = $reportCount
     unattributedReportCount = $unattributedReportCount
     missingReportCount = $missingReportCount

@@ -1544,3 +1544,9 @@ baseline 必须在 materialize 前检查 runner summary 的版本、缺失报告
 决策：运行编排合同升级为 `native-manifest-runner-v0.3`。Emby 源解析只有在错误明确属于瞬时请求失败时才允许重试，最多 6 次，退避上限 4 秒；永久的凭据、媒体源缺失、URL 非法或 resolver 输出合同错误不得反复等待。恢复后的 case 必须重新生成本轮唯一 attempt id 并真实调用 native harness，summary 保留总解析尝试次数；重试预算耗尽仍是 unresolved orchestration error，不能满足 `native-playback` 证据要求。
 
 原因：正常机器和网络抖动是重复评测的观测分布，不应因不足 1 秒的密集重试让完整长基线频繁作废；但自动重试也不能删除首次异常、降低 stable 标准或把未执行播放算成 pass。该变化只增强运行编排的抗瞬时波动能力，不改变播放器 Core、report schema 或评价阈值。单轮恢复只能说明源最终可解析，性能和稳定性结论仍需同代码、同 manifest 的重复报告支持。
+
+# 2026-07-15: 同一评测运行只解析一次唯一 Emby 媒体源
+
+决策：运行编排合同升级为 `native-manifest-runner-v0.4`。runner 必须在真实播放前按 `itemId + mediaSourceId` 对选中 case 的 Emby 源去重并预解析；同源 case 只复用当前进程内的解析结果，不能反复认证和请求 PlaybackInfo。缓存不得持久化 direct-stream URL、访问令牌或可逆 key；summary 只保存唯一源计数、成功计数、命中计数、每个 case 的原始解析尝试数和缓存命中布尔值。
+
+原因：manifest case 表达的是不同播放场景，不代表每个场景都需要重新发现同一媒体源。长基线中重复外部 API 请求会扩大环境故障面，也让后段 case 与前段 case 的源身份获取条件不一致。预解析失败仍必须让所有依赖该源的 case 输出 orchestration error 并阻断 baseline；缓存只减少重复编排工作，不改变 native attempt 身份、播放器结果、评价阈值或对正常机器/网络方差的重复测量要求。
