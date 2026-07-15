@@ -71,6 +71,48 @@ try {
       ]
     },
     {
+      "Id": "track-movie",
+      "Name": "Multi-track SDR Sample",
+      "Type": "Movie",
+      "MediaSources": [
+        {
+          "Id": "track-source",
+          "Name": "1080p SDR with alternate tracks",
+          "Bitrate": 2500000,
+          "RunTimeTicks": 6000000000,
+          "MediaStreams": [
+            {
+              "Type": "Video",
+              "Index": 0,
+              "Codec": "hevc",
+              "Width": 1920,
+              "Height": 1080,
+              "RealFrameRate": 60.0,
+              "VideoRange": "SDR",
+              "ColorPrimaries": "bt709",
+              "ColorTransfer": "bt709",
+              "ColorSpace": "bt709"
+            },
+            {
+              "Type": "Audio",
+              "Index": 1,
+              "Codec": "aac"
+            },
+            {
+              "Type": "Audio",
+              "Index": 2,
+              "Codec": "ac3"
+            },
+            {
+              "Type": "Subtitle",
+              "Index": 3,
+              "Codec": "subrip"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "Id": "buffering-movie",
       "Name": "4K High Bitrate HDR",
       "Type": "Movie",
@@ -291,7 +333,9 @@ try {
     $manifest = $manifestText | ConvertFrom-Json
 
     $hdrOnlyItems = Get-Content -Raw -LiteralPath $itemsPath | ConvertFrom-Json
-    $hdrOnlyItems.Items = @($hdrOnlyItems.Items | Where-Object Id -ne 'sdr-movie')
+    $hdrOnlyItems.Items = @($hdrOnlyItems.Items | Where-Object {
+        $_.Id -notin @('sdr-movie', 'track-movie')
+    })
     $hdrOnlyItems | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $hdrOnlyItemsPath -Encoding UTF8
     & $scriptPath -ItemsJsonPath $hdrOnlyItemsPath -OutputPath $hdrOnlyOutputPath
     $hdrOnlyManifest = Get-Content -Raw -LiteralPath $hdrOnlyOutputPath | ConvertFrom-Json
@@ -311,14 +355,22 @@ try {
         $_.executionRequirement.scenario -eq 'subtitle-switch'
     }) | Select-Object -First 1
     if ($null -eq $audioSwitchCase -or
+        $audioSwitchCase.caseId -ne 'private-emby/track-movie/track-source/audio-switch' -or
         $audioSwitchCase.expected.maxInteractionRecoveryDurationMs -ne 2000 -or
         -not ($audioSwitchCase.purpose -contains 'audio-switch')) {
-        throw 'Generated private Emby manifest must include an audio-switch case with the versioned recovery SLO.'
+        throw 'Generated private Emby manifest must bind audio-switch to a source with at least two audio tracks.'
     }
     if ($null -eq $subtitleSwitchCase -or
+        $subtitleSwitchCase.caseId -ne 'private-emby/track-movie/track-source/subtitle-switch' -or
         $subtitleSwitchCase.expected.maxInteractionRecoveryDurationMs -ne 2000 -or
         -not ($subtitleSwitchCase.purpose -contains 'subtitle-switch')) {
-        throw 'Generated private Emby manifest must include a subtitle-switch case with the versioned recovery SLO.'
+        throw 'Generated private Emby manifest must bind subtitle-switch to a source with a subtitle track.'
+    }
+    if ($manifest.cases | Where-Object {
+        $_.itemId -eq 'sdr-movie' -and
+        $_.executionRequirement.scenario -in @('audio-switch', 'subtitle-switch')
+    }) {
+        throw 'Generated private Emby manifest must not declare interaction scenarios on an incapable source.'
     }
     $validation = Get-Content -Raw -LiteralPath $validationPath | ConvertFrom-Json
     if ($validation.coverage.status -ne 'incomplete' -or

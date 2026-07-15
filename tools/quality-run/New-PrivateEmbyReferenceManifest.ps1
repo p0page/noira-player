@@ -517,6 +517,17 @@ function Get-TimelinePositions([long]$RunTimeTicks) {
     }
 }
 
+function Get-MediaStreamCount(
+    [object]$MediaSource,
+    [string]$Type,
+    [bool]$EmbeddedOnly = $false
+) {
+    @((Get-Array $MediaSource.MediaStreams) | Where-Object {
+        (Normalize-String $_.Type).Equals($Type, [StringComparison]::OrdinalIgnoreCase) -and
+        (-not $EmbeddedOnly -or $_.IsExternal -ne $true)
+    }).Count
+}
+
 function ConvertTo-Candidates([object[]]$Items) {
     $candidates = @()
     foreach ($item in $Items) {
@@ -559,6 +570,8 @@ function ConvertTo-Candidates([object[]]$Items) {
                 VideoStream = $video
                 FrameRate = $frameRate
                 HdrProfile = $hdrProfile
+                AudioTrackCount = Get-MediaStreamCount $source 'Audio'
+                EmbeddedSubtitleTrackCount = Get-MediaStreamCount $source 'Subtitle' $true
             }
         }
     }
@@ -672,8 +685,30 @@ function New-ReferenceManifest([object[]]$Items) {
                 -SeekTargetPositionTicks $timeline.SeekTargetPositionTicks `
                 -MaxSeekPositionErrorMs 500.0
         }
-        $cases += New-ReferenceCase $sdr 'audio-switch' @('tracks', 'audio-switch') 1 $false $false
-        $cases += New-ReferenceCase $sdr 'subtitle-switch' @('subtitles', 'subtitle-switch') 1 $false $false
+    }
+
+    $audioSwitch = Select-FirstCandidate $candidates {
+        $_.HdrProfile.kind -eq 'Sdr' -and $_.AudioTrackCount -ge 2
+    } { $_.Bitrate }
+    if ($null -eq $audioSwitch) {
+        $audioSwitch = Select-FirstCandidate $candidates {
+            $_.HdrProfile.isDirectPlayable -eq $true -and $_.AudioTrackCount -ge 2
+        } { $_.Bitrate }
+    }
+    if ($null -ne $audioSwitch) {
+        $cases += New-ReferenceCase $audioSwitch 'audio-switch' @('tracks', 'audio-switch') 1 $false $false
+    }
+
+    $subtitleSwitch = Select-FirstCandidate $candidates {
+        $_.HdrProfile.kind -eq 'Sdr' -and $_.EmbeddedSubtitleTrackCount -ge 1
+    } { $_.Bitrate }
+    if ($null -eq $subtitleSwitch) {
+        $subtitleSwitch = Select-FirstCandidate $candidates {
+            $_.HdrProfile.isDirectPlayable -eq $true -and $_.EmbeddedSubtitleTrackCount -ge 1
+        } { $_.Bitrate }
+    }
+    if ($null -ne $subtitleSwitch) {
+        $cases += New-ReferenceCase $subtitleSwitch 'subtitle-switch' @('subtitles', 'subtitle-switch') 1 $false $false
     }
 
     $longPause = $sdr
